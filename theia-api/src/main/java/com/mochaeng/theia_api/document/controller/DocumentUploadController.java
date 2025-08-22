@@ -1,8 +1,8 @@
 package com.mochaeng.theia_api.document.controller;
 
 import com.mochaeng.theia_api.document.dto.UploadDocumentResponse;
-import com.mochaeng.theia_api.document.service.DocumentService;
 import com.mochaeng.theia_api.document.model.Document;
+import com.mochaeng.theia_api.document.service.DocumentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -35,7 +35,18 @@ public class DocumentUploadController {
             file.getSize()
         );
 
-        Document document = new Document(
+        if (file.isEmpty()) {
+            throw new IllegalArgumentException("File cannot be empty");
+        }
+
+        if (
+            file.getOriginalFilename() == null ||
+                file.getOriginalFilename().trim().isEmpty()
+        ) {
+            throw new IllegalArgumentException("File must have a valid name");
+        }
+
+        Document document = Document.create(
             file.getOriginalFilename(),
             file.getContentType(),
             file.getBytes()

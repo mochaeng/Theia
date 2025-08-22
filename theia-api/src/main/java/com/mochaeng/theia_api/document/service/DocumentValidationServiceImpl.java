@@ -14,19 +14,27 @@ import java.util.List;
 public class DocumentValidationServiceImpl implements DocumentValidationService {
     private final long maxFileSizeBytes;
     private final List<String> allowedContentTypes;
+    private final VirusScanService virusScanService;
 
     public DocumentValidationServiceImpl(
         @Value("${app.upload.max-file-size:10485760}") long maxFileSizeBytes,
-        @Value("${app.upload.allowed-content-types:application/pdf}") List<String> allowedContentTypes
+        @Value("${app.upload.allowed-content-types:application/pdf}") List<String> allowedContentTypes,
+        VirusScanService virusScanService
     ) {
         this.maxFileSizeBytes = maxFileSizeBytes;
         this.allowedContentTypes = allowedContentTypes;
+        this.virusScanService = virusScanService;
     }
 
     @Override
     public void validateDocument(Document document) {
         log.debug("Validating document: {}", document.filename());
 
+        validateFileType(document);
+        validateFileSize(document);
+        validateVirusFree(document);
+
+        log.debug("Document validation completed successfully for: {}", document.filename());
     }
 
     private void validateFileType(Document document) {
@@ -52,6 +60,15 @@ public class DocumentValidationServiceImpl implements DocumentValidationService 
                     document.content().length,
                     maxFileSizeBytes
                 )
+            );
+        }
+    }
+
+    private void validateVirusFree(Document document) {
+        if (virusScanService.hasVirus(document)) {
+            throw new ValidationException(
+                "VIRUS_DETECTED",
+                "File contains malicious content and cannot be processed"
             );
         }
     }
