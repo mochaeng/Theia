@@ -1,4 +1,4 @@
-package com.mochaeng.theia_api.document.validation;
+package com.mochaeng.theia_api.document.service;
 
 import com.mochaeng.theia_api.document.model.Document;
 

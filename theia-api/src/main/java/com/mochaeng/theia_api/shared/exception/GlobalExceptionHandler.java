@@ -1,37 +1,31 @@
 package com.mochaeng.theia_api.shared.exception;
 
 import com.mochaeng.theia_api.document.exception.DocumentProcessingException;
+import com.mochaeng.theia_api.document.exception.DocumentValidationException;
 import com.mochaeng.theia_api.shared.dto.ErrorResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
-
-import java.util.HashMap;
-import java.util.Map;
 
 @RestControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
 
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    @ExceptionHandler(ValidationException.class)
+    @ExceptionHandler(DocumentValidationException.class)
     public ResponseEntity<ErrorResponse> handleValidationException(
-        ValidationException ex,
+        DocumentValidationException ex,
         WebRequest request
     ) {
         log.warn("Validation error: {} - {}", ex.getErrorCode(), ex.getMessage());
 
         ErrorResponse errorResponse = new ErrorResponse(
-            ex.getErrorCode(),
+            ex.getErrorCodeValue(),
             ex.getMessage(),
-            request
-                .getDescription(false)
-                .replace("uri=", "")
+            extractPath(request)
         );
 
         return ResponseEntity.badRequest().body(errorResponse);
@@ -42,17 +36,21 @@ public class GlobalExceptionHandler {
         DocumentProcessingException ex,
         WebRequest request
     ) {
-        log.error("Document processing error: {} - {}", ex.getErrorCode(), ex.getMessage(), ex);
+        log.error(
+            "Document processing error: {} - {}",
+            ex.getErrorCode(),
+            ex.getMessage(), ex
+        );
 
         ErrorResponse errorResponse = new ErrorResponse(
             ex.getErrorCode(),
             ex.getMessage(),
-            request
-                .getDescription(false)
-                .replace("uri=", "")
+            extractPath(request)
         );
 
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        return ResponseEntity
+            .status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .body(errorResponse);
     }
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)
@@ -65,12 +63,12 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = new ErrorResponse(
             "FILE_SIZE_EXCEEDED",
             "File size exceeds the maximum allowed limit",
-            request
-                .getDescription(false)
-                .replace("uri=", "")
+            extractPath(request)
         );
 
-        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(errorResponse);
+        return ResponseEntity
+            .status(HttpStatus.PAYLOAD_TOO_LARGE)
+            .body(errorResponse);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
@@ -82,10 +80,8 @@ public class GlobalExceptionHandler {
 
         ErrorResponse errorResponse = new ErrorResponse(
             "INVALID_ARGUMENT",
-            ex.getMessage(),
-            request
-                .getDescription(false)
-                .replace("uri=", "")
+            "Invalid input provided",
+            extractPath(request)
         );
 
         return ResponseEntity.badRequest().body(errorResponse);
@@ -96,23 +92,27 @@ public class GlobalExceptionHandler {
         Exception ex,
         WebRequest request
     ) {
-        log.error("Unexpected error occurred", ex);
+        log.error(
+            "Unexpected error occurred: {} - {}",
+            ex.getClass().getSimpleName(),
+            ex.getMessage(),
+            ex
+        );
 
         ErrorResponse errorResponse = new ErrorResponse(
             "INTERNAL_ERROR",
             "An unexpected error occurred. Please try again later.",
-            request
-                .getDescription(false)
-                .replace("uri=", "")
+            extractPath(request)
         );
 
-        Map<String, Object> details = new HashMap<>();
-        details.put("exceptionType", ex.getClass().getSimpleName());
-//         if (isDevelopment()) {
-//             details.put("stackTrace", ex.getStackTrace());
-//         }
-        errorResponse.setDetails(details);
+        return ResponseEntity
+            .status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .body(errorResponse);
+    }
 
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+    private String extractPath(WebRequest request) {
+        return request
+            .getDescription(false)
+            .replace("uri=", "");
     }
 }

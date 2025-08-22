@@ -1,5 +1,8 @@
 package com.mochaeng.theia_api.document.exception;
 
+import lombok.Getter;
+
+@Getter
 public class DocumentProcessingException extends RuntimeException {
     private final String errorCode;
 
@@ -13,7 +16,4 @@ public class DocumentProcessingException extends RuntimeException {
         this.errorCode = errorCode;
     }
 
-    public String getErrorCode() {
-        return errorCode;
-    }
 }

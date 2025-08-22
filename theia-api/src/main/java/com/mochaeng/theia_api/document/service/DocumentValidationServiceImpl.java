@@ -1,12 +1,17 @@
 package com.mochaeng.theia_api.document.service;
 
-import com.mochaeng.theia_api.shared.exception.ValidationException;
+import com.mochaeng.theia_api.document.exception.DocumentValidationErrorCode;
 import com.mochaeng.theia_api.document.model.Document;
-import com.mochaeng.theia_api.document.validation.DocumentValidationService;
+import com.mochaeng.theia_api.document.exception.DocumentValidationException;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.encryption.InvalidPasswordException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.util.List;
 
 @Service
@@ -26,15 +31,60 @@ public class DocumentValidationServiceImpl implements DocumentValidationService 
         this.virusScanService = virusScanService;
     }
 
+
     @Override
     public void validateDocument(Document document) {
         log.debug("Validating document: {}", document.filename());
 
-        validateFileType(document);
         validateFileSize(document);
+        validatePdfMagicBytes(document);
+        validateStructure(document);
+        validateFileType(document);
         validateVirusFree(document);
 
-        log.debug("Document validation completed successfully for: {}", document.filename());
+        log.debug(
+            "Document validation completed successfully for: {}",
+            document.filename()
+        );
+    }
+
+    private void validatePdfMagicBytes(Document document) {
+        byte[] content = document.content();
+        if (content.length < 5 || !(new String(content, 0, 5).startsWith("%PDF-"))) {
+            throw new  DocumentValidationException(
+                DocumentValidationErrorCode.INVALID_PDF
+            );
+        }
+    }
+
+    private void validateStructure(Document document) {
+        try (ByteArrayInputStream inputStream = new ByteArrayInputStream(document.content())) {
+            validateBasicStructure(inputStream);
+        } catch (InvalidPasswordException e) {
+            throw new DocumentValidationException(
+                DocumentValidationErrorCode.PDF_ENCRYPTED
+            );
+        } catch (IOException e) {
+            throw new DocumentValidationException(
+                DocumentValidationErrorCode.PDF_CORRUPTED
+            );
+        }
+    }
+
+    private void validateBasicStructure(ByteArrayInputStream inputStream) throws IOException {
+        try (PDDocument doc = Loader.loadPDF(inputStream.readAllBytes())) {
+            if (doc.getNumberOfPages() == 0) {
+                throw new DocumentValidationException(
+                    DocumentValidationErrorCode.PDF_EMPTY
+                );
+            }
+
+            if (doc.isEncrypted()) {
+                throw new DocumentValidationException(
+                    DocumentValidationErrorCode.PDF_ENCRYPTED
+                );
+            }
+        }
     }
 
     private void validateFileType(Document document) {
@@ -42,8 +92,8 @@ public class DocumentValidationServiceImpl implements DocumentValidationService 
             document.contentType() == null ||
                 !allowedContentTypes.contains(document.contentType())
         ) {
-            throw new ValidationException(
-                "INVALID_FILE_TYPE",
+            throw new DocumentValidationException(
+                DocumentValidationErrorCode.INVALID_FILE_TYPE,
                 String.format("File type '%s' is not allowed. Allowed types: %s",
                     document.contentType(),
                     allowedContentTypes
@@ -54,9 +104,10 @@ public class DocumentValidationServiceImpl implements DocumentValidationService 
 
     private void validateFileSize(Document document) {
         if (document.content().length > maxFileSizeBytes) {
-            throw new ValidationException(
-                "FILE_TOO_LARGE",
-                String.format("File size %d bytes exceeds maximum allowed size of %d bytes",
+            throw new DocumentValidationException(
+                DocumentValidationErrorCode.FILE_TOO_LARGE,
+                String.format(
+                    "File size %d bytes exceeds maximum allowed size of %d bytes",
                     document.content().length,
                     maxFileSizeBytes
                 )
@@ -66,9 +117,8 @@ public class DocumentValidationServiceImpl implements DocumentValidationService 
 
     private void validateVirusFree(Document document) {
         if (virusScanService.hasVirus(document)) {
-            throw new ValidationException(
-                "VIRUS_DETECTED",
-                "File contains malicious content and cannot be processed"
+            throw new DocumentValidationException(
+                DocumentValidationErrorCode.VIRUS_DETECTED
             );
         }
     }

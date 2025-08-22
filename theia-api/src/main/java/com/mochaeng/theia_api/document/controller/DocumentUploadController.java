@@ -35,17 +35,6 @@ public class DocumentUploadController {
             file.getSize()
         );
 
-        if (file.isEmpty()) {
-            throw new IllegalArgumentException("File cannot be empty");
-        }
-
-        if (
-            file.getOriginalFilename() == null ||
-                file.getOriginalFilename().trim().isEmpty()
-        ) {
-            throw new IllegalArgumentException("File must have a valid name");
-        }
-
         Document document = Document.create(
             file.getOriginalFilename(),
             file.getContentType(),
@@ -54,6 +43,8 @@ public class DocumentUploadController {
 
         documentService.uploadDocument(document);
 
-        return ResponseEntity.ok(new UploadDocumentResponse("UUID", document.filename()));
+        return ResponseEntity.ok(
+            new UploadDocumentResponse(document.id().toString())
+        );
     }
 }
