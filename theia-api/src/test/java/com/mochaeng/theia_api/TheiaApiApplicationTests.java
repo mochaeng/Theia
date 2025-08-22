@@ -1,0 +1,13 @@
+package com.mochaeng.theia_api;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+
+@SpringBootTest
+class TheiaApiApplicationTests {
+
+	@Test
+	void contextLoads() {
+	}
+
+}
