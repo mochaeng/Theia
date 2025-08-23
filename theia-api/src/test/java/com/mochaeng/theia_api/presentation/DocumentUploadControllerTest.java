@@ -28,12 +28,14 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.util.StreamUtils;
 
 @WebMvcTest(DocumentUploadController.class)
+@ActiveProfiles("test")
 public class DocumentUploadControllerTest {
   private static final String UPLOAD_ENDPOINT = "/api/upload-document";
   private static final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
