@@ -32,26 +32,30 @@ jobs:
 
       - name: Make gradlew executable
         run: chmod +x gradlew
+        working-directory: ./theia-api
 
       - name: Run tests
         run: ./gradlew test
+        working-directory: ./theia-api
 
       - name: Check code formatting
         run: ./gradlew spotlessCheck
+        working-directory: ./theia-api
 
       - name: Run SpotBugs analysis
         run: ./gradlew spotbugsMain spotbugsTest
+        working-directory: ./theia-api
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: test-results
-          path: build/reports/tests/
+          path: theia-api/build/reports/tests/
 
       - name: Upload SpotBugs results
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: spotbugs-results
-          path: build/reports/spotbugs/
+          path: theia-api/build/reports/spotbugs/
