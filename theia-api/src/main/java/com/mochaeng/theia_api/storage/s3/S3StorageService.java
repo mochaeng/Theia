@@ -13,24 +13,24 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 @RequiredArgsConstructor
 @Slf4j
 public class S3StorageService implements StorageService {
-    private final S3Client s3;
-    private final S3Properties s3Props;
+  private final S3Client s3;
+  private final S3Properties s3Props;
 
-    @Override
-    public void storeDocument(Document document) {
-        try {
-            PutObjectRequest request = PutObjectRequest.builder()
-                .bucket(s3Props.bucketName())
-                .key(document.filename())
-                .contentType(document.contentType())
-                .build();
+  @Override
+  public void storeDocument(Document document) {
+    try {
+      PutObjectRequest request =
+          PutObjectRequest.builder()
+              .bucket(s3Props.bucketName())
+              .key(document.filename())
+              .contentType(document.contentType())
+              .build();
 
-            s3.putObject(request, RequestBody.fromBytes(document.content()));
+      s3.putObject(request, RequestBody.fromBytes(document.content()));
 
-            log.info("store document successfully");
-        } catch (Exception e) {
-            throw new RuntimeException(
-                "error uploading document: " + e.getMessage(), e);
-        }
+      log.info("store document successfully");
+    } catch (Exception e) {
+      throw new RuntimeException("error uploading document: " + e.getMessage(), e);
     }
+  }
 }

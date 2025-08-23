@@ -1,11 +1,23 @@
 package com.mochaeng.theia_api.presentation;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mochaeng.theia_api.document.controller.DocumentUploadController;
 import com.mochaeng.theia_api.document.exception.DocumentValidationErrorCode;
 import com.mochaeng.theia_api.document.service.*;
 import com.mochaeng.theia_api.storage.s3.StorageService;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,228 +33,181 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.util.StreamUtils;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.List;
-import java.util.UUID;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-
-
 @WebMvcTest(DocumentUploadController.class)
 public class DocumentUploadControllerTest {
-    private static final String UPLOAD_ENDPOINT = "/api/upload-document";
-    private static final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
-    private static final List<String> ALLOWED_CONTENT_TYPES = List.of(
-        MediaType.APPLICATION_PDF_VALUE
-    );
+  private static final String UPLOAD_ENDPOINT = "/api/upload-document";
+  private static final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+  private static final List<String> ALLOWED_CONTENT_TYPES =
+      List.of(MediaType.APPLICATION_PDF_VALUE);
 
-    private static final String BITCOIN_PDF_PATH = "test-files/bitcoin.pdf";
+  private static final String BITCOIN_PDF_PATH = "test-files/bitcoin.pdf";
 
-    @Autowired
-    private MockMvc mockMvc;
+  @Autowired private MockMvc mockMvc;
 
-    @MockitoBean
-    private StorageService storageService;
+  @MockitoBean private StorageService storageService;
 
-    @MockitoBean
-    private VirusScanService virusScanService;
+  @MockitoBean private VirusScanService virusScanService;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+  @Autowired private ObjectMapper objectMapper;
 
-    @Test
-    @DisplayName("Should successfully upload Bitcoin whitepaper PDF and return valid UUID")
-    void uploadDocument_WithValidPDF_ShouldReturnUUID() throws Exception {
-        doNothing().when(storageService).storeDocument(any());
-        when(virusScanService.hasVirus(any())).thenReturn(false);
+  @Test
+  @DisplayName("Should successfully upload Bitcoin whitepaper PDF and return valid UUID")
+  void uploadDocument_WithValidPDF_ShouldReturnUUID() throws Exception {
+    doNothing().when(storageService).storeDocument(any());
+    when(virusScanService.hasVirus(any())).thenReturn(false);
 
-        MockMultipartFile bitcoinPdf = createRealPdfFile(
-            BITCOIN_PDF_PATH,
-            "bitcoin.pdf"
-        );
+    MockMultipartFile bitcoinPdf = createRealPdfFile(BITCOIN_PDF_PATH, "bitcoin.pdf");
 
-        assertThat(bitcoinPdf.getSize()).isGreaterThan(0);
-        assertThat(bitcoinPdf.getOriginalFilename()).isEqualTo("bitcoin.pdf");
-        assertThat(bitcoinPdf.getContentType()).isEqualTo(MediaType.APPLICATION_PDF_VALUE);
+    assertThat(bitcoinPdf.getSize()).isGreaterThan(0);
+    assertThat(bitcoinPdf.getOriginalFilename()).isEqualTo("bitcoin.pdf");
+    assertThat(bitcoinPdf.getContentType()).isEqualTo(MediaType.APPLICATION_PDF_VALUE);
 
-        MvcResult result = mockMvc.perform(multipart(UPLOAD_ENDPOINT)
-                .file(bitcoinPdf))
+    MvcResult result =
+        mockMvc
+            .perform(multipart(UPLOAD_ENDPOINT).file(bitcoinPdf))
             .andExpect(status().isOk())
             .andExpect(content().contentType(MediaType.APPLICATION_JSON))
             .andExpect(jsonPath("$.documentID").exists())
             .andReturn();
 
-        String documentId = extractDocumentIdFromResponse(result);
-        assertValidUUID(documentId);
+    String documentId = extractDocumentIdFromResponse(result);
+    assertValidUUID(documentId);
 
-        verify(storageService, times(1)).storeDocument(any());
-        verify(virusScanService, times(1)).hasVirus(any());
-    }
+    verify(storageService, times(1)).storeDocument(any());
+    verify(virusScanService, times(1)).hasVirus(any());
+  }
 
-    @Test
-    @DisplayName("Should reject text file with unsupported content type")
-    void uploadDocument_WithTextFile_ShouldReturnBadRequest() throws Exception {
-        when(virusScanService.hasVirus(any())).thenReturn(false);
+  @Test
+  @DisplayName("Should reject text file with unsupported content type")
+  void uploadDocument_WithTextFile_ShouldReturnBadRequest() throws Exception {
+    when(virusScanService.hasVirus(any())).thenReturn(false);
 
-        MockMultipartFile textFile = createMockFile(
+    MockMultipartFile textFile =
+        createMockFile(
             "document.txt",
             MediaType.TEXT_PLAIN_VALUE,
-            "Sample text".getBytes()
-        );
+            "Sample text".getBytes(StandardCharsets.UTF_8));
 
-        mockMvc.perform(multipart(UPLOAD_ENDPOINT)
-                .file(textFile))
-            .andExpect(status().isBadRequest())
-            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-            .andExpect(jsonPath("$.errorCode").value(
-                DocumentValidationErrorCode.INVALID_PDF.getCode()
-            ))
-            .andExpect(jsonPath("$.message").value(
-                DocumentValidationErrorCode.INVALID_PDF.getDefaultMessage()
-            ));
+    mockMvc
+        .perform(multipart(UPLOAD_ENDPOINT).file(textFile))
+        .andExpect(status().isBadRequest())
+        .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+        .andExpect(jsonPath("$.errorCode").value(DocumentValidationErrorCode.INVALID_PDF.getCode()))
+        .andExpect(
+            jsonPath("$.message")
+                .value(DocumentValidationErrorCode.INVALID_PDF.getDefaultMessage()));
 
-        verifyNoInteractions(storageService, virusScanService);
+    verifyNoInteractions(storageService, virusScanService);
+  }
+
+  @Test
+  @DisplayName("Should reject PDF file that exceeds size limit")
+  void uploadDocument_WithOversizedPDF_ShouldReturnBadRequest() throws Exception {
+    byte[] oversizedContent = new byte[(int) MAX_FILE_SIZE + 1];
+    MockMultipartFile oversizedFile =
+        createMockFile("large.pdf", MediaType.APPLICATION_PDF_VALUE, oversizedContent);
+
+    mockMvc
+        .perform(multipart(UPLOAD_ENDPOINT).file(oversizedFile))
+        .andExpect(status().isBadRequest())
+        .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+        .andExpect(jsonPath("$.errorCode").value("FILE_TOO_LARGE"))
+        .andExpect(
+            jsonPath("$.message")
+                .value(
+                    String.format(
+                        "File size %d bytes exceeds maximum allowed size of %d bytes",
+                        MAX_FILE_SIZE + 1, MAX_FILE_SIZE)));
+
+    verifyNoInteractions(storageService, virusScanService);
+  }
+
+  @Test
+  @DisplayName("Should reject empty PDF file")
+  void uploadDocument_WithEmptyPDF_ShouldReturnBadRequest() throws Exception {
+    MockMultipartFile emptyFile =
+        createMockFile("empty.pdf", MediaType.APPLICATION_PDF_VALUE, new byte[0]);
+
+    mockMvc
+        .perform(multipart(UPLOAD_ENDPOINT).file(emptyFile))
+        .andExpect(status().isBadRequest())
+        .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+        .andExpect(jsonPath("$.errorCode").value(DocumentValidationErrorCode.INVALID_PDF.getCode()))
+        .andExpect(
+            jsonPath("$.message")
+                .value(DocumentValidationErrorCode.INVALID_PDF.getDefaultMessage()));
+
+    verifyNoInteractions(storageService, virusScanService);
+  }
+
+  @Test
+  @DisplayName("Should reject PDF file containing virus")
+  void uploadDocument_WithVirusInfectedPDF_ShouldReturnBadRequest() throws Exception {
+    when(virusScanService.hasVirus(any())).thenReturn(true);
+    MockMultipartFile infectedFile;
+
+    infectedFile =
+        createMockFile("infected.pdf", MediaType.APPLICATION_PDF_VALUE, createMinimalPdfContent());
+
+    mockMvc
+        .perform(multipart(UPLOAD_ENDPOINT).file(infectedFile))
+        .andExpect(status().isBadRequest())
+        .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+        .andExpect(jsonPath("$.errorCode").value("VIRUS_DETECTED"))
+        .andExpect(
+            jsonPath("$.message").value("File contains malicious content and cannot be processed"));
+
+    verify(virusScanService, times(1)).hasVirus(any());
+    verifyNoInteractions(storageService);
+  }
+
+  private MockMultipartFile createMockFile(String filename, String contentType, byte[] content) {
+    return new MockMultipartFile("file", filename, contentType, content);
+  }
+
+  private void assertValidUUID(String uuidString) {
+    UUID uuid = assertDoesNotThrow(() -> UUID.fromString(uuidString));
+    assertThat(uuid.toString()).isEqualTo(uuidString);
+  }
+
+  private String extractDocumentIdFromResponse(MvcResult result) throws Exception {
+    String responseContent = result.getResponse().getContentAsString();
+    JsonNode jsonResponse = objectMapper.readTree(responseContent);
+    return jsonResponse.get("documentID").asText();
+  }
+
+  private MockMultipartFile createRealPdfFile(String resourcePath, String filename)
+      throws IOException {
+    byte[] pdfContent = loadPdfFromResources(resourcePath);
+    return new MockMultipartFile("file", filename, MediaType.APPLICATION_PDF_VALUE, pdfContent);
+  }
+
+  private byte[] loadPdfFromResources(String resourcePath) throws IOException {
+    ClassPathResource resource = new ClassPathResource(resourcePath);
+    try (InputStream inputStream = resource.getInputStream()) {
+      return StreamUtils.copyToByteArray(inputStream);
+    }
+  }
+
+  private byte[] createMinimalPdfContent() {
+    return "%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] >>\nendobj\nxref\n0 4\n0000000000 65535 f \n0000000010 00000 n \n0000000079 00000 n \n0000000173 00000 n \ntrailer\n<< /Size 4 /Root 1 0 R >>\nstartxref\n253\n%%EOF"
+        .getBytes(StandardCharsets.UTF_8);
+  }
+
+  @TestConfiguration
+  static class TestConfig {
+    @Bean
+    @Primary
+    public DocumentValidationService documentValidationService(VirusScanService virusScanService) {
+      return new DocumentValidationServiceImpl(
+          MAX_FILE_SIZE, ALLOWED_CONTENT_TYPES, virusScanService);
     }
 
-    @Test
-    @DisplayName("Should reject PDF file that exceeds size limit")
-    void uploadDocument_WithOversizedPDF_ShouldReturnBadRequest() throws Exception {
-        byte[] oversizedContent = new byte[(int) MAX_FILE_SIZE + 1];
-        MockMultipartFile oversizedFile = createMockFile(
-            "large.pdf",
-            MediaType.APPLICATION_PDF_VALUE,
-            oversizedContent
-        );
-
-        mockMvc.perform(multipart(UPLOAD_ENDPOINT)
-                .file(oversizedFile))
-            .andExpect(status().isBadRequest())
-            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-            .andExpect(jsonPath("$.errorCode").value("FILE_TOO_LARGE"))
-            .andExpect(jsonPath("$.message").value(
-                String.format("File size %d bytes exceeds maximum allowed size of %d bytes",
-                    MAX_FILE_SIZE + 1, MAX_FILE_SIZE)
-            ));
-
-        verifyNoInteractions(storageService, virusScanService);
+    @Bean
+    @Primary
+    public DocumentService documentService(
+        DocumentValidationService documentValidationService, StorageService storageService) {
+      return new DocumentServiceImpl(documentValidationService, storageService);
     }
-
-    @Test
-    @DisplayName("Should reject empty PDF file")
-    void uploadDocument_WithEmptyPDF_ShouldReturnBadRequest() throws Exception {
-        MockMultipartFile emptyFile = createMockFile(
-            "empty.pdf",
-            MediaType.APPLICATION_PDF_VALUE,
-            new byte[0]
-        );
-
-        mockMvc.perform(multipart(UPLOAD_ENDPOINT)
-                .file(emptyFile))
-            .andExpect(status().isBadRequest())
-            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-            .andExpect(jsonPath("$.errorCode").value(
-                DocumentValidationErrorCode.INVALID_PDF.getCode()
-            ))
-            .andExpect(jsonPath("$.message").value(
-                DocumentValidationErrorCode.INVALID_PDF.getDefaultMessage()
-            ));
-
-        verifyNoInteractions(storageService, virusScanService);
-    }
-
-    @Test
-    @DisplayName("Should reject PDF file containing virus")
-    void uploadDocument_WithVirusInfectedPDF_ShouldReturnBadRequest() throws Exception {
-        when(virusScanService.hasVirus(any())).thenReturn(true);
-        MockMultipartFile infectedFile;
-
-        infectedFile = createMockFile(
-            "infected.pdf",
-            MediaType.APPLICATION_PDF_VALUE,
-            createMinimalPdfContent()
-        );
-
-        mockMvc.perform(multipart(UPLOAD_ENDPOINT)
-                .file(infectedFile))
-            .andExpect(status().isBadRequest())
-            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-            .andExpect(jsonPath("$.errorCode").value("VIRUS_DETECTED"))
-            .andExpect(jsonPath("$.message").value("File contains malicious content and cannot be processed"));
-
-        verify(virusScanService, times(1)).hasVirus(any());
-        verifyNoInteractions(storageService);
-    }
-
-    private MockMultipartFile createMockFile(
-        String filename,
-        String contentType,
-        byte[] content
-    ) {
-        return new MockMultipartFile("file", filename, contentType, content);
-    }
-
-    private void assertValidUUID(String uuidString) {
-        UUID uuid = assertDoesNotThrow(() -> UUID.fromString(uuidString));
-        assertThat(uuid.toString()).isEqualTo(uuidString);
-    }
-
-    private String extractDocumentIdFromResponse(MvcResult result) throws Exception {
-        String responseContent = result.getResponse().getContentAsString();
-        JsonNode jsonResponse = objectMapper.readTree(responseContent);
-        return jsonResponse.get("documentID").asText();
-    }
-
-    private MockMultipartFile createRealPdfFile(
-        String resourcePath,
-        String filename
-    ) throws IOException {
-        byte[] pdfContent = loadPdfFromResources(resourcePath);
-        return new MockMultipartFile(
-            "file",
-            filename,
-            MediaType.APPLICATION_PDF_VALUE,
-            pdfContent
-        );
-    }
-
-    private byte[] loadPdfFromResources(String resourcePath) throws IOException {
-        ClassPathResource resource = new ClassPathResource(resourcePath);
-        try (InputStream inputStream = resource.getInputStream()) {
-            return StreamUtils.copyToByteArray(inputStream);
-        }
-    }
-
-    private byte[] createMinimalPdfContent() {
-        return "%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] >>\nendobj\nxref\n0 4\n0000000000 65535 f \n0000000010 00000 n \n0000000079 00000 n \n0000000173 00000 n \ntrailer\n<< /Size 4 /Root 1 0 R >>\nstartxref\n253\n%%EOF".getBytes();
-    }
-
-    @TestConfiguration
-    static class TestConfig {
-        @Bean
-        @Primary
-        public DocumentValidationService documentValidationService(
-            VirusScanService virusScanService
-        ) {
-            return new DocumentValidationServiceImpl(
-                MAX_FILE_SIZE,
-                ALLOWED_CONTENT_TYPES,
-                virusScanService
-            );
-        }
-
-        @Bean
-        @Primary
-        public DocumentService documentService(
-            DocumentValidationService documentValidationService,
-            StorageService storageService
-        ) {
-            return new DocumentServiceImpl(documentValidationService, storageService);
-        }
-    }
+  }
 }

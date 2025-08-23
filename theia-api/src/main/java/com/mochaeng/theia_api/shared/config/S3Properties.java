@@ -9,6 +9,4 @@ public record S3Properties(
     String secretAccessKey,
     String region,
     boolean pathStyleAccess,
-    String endpoint
-) {
-}
+    String endpoint) {}

@@ -8,7 +8,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 @SpringBootApplication
 @EnableConfigurationProperties(S3Properties.class)
 public class TheiaApiApplication {
-	public static void main(String[] args) {
-		SpringApplication.run(TheiaApiApplication.class, args);
-	}
+  public static void main(String[] args) {
+    SpringApplication.run(TheiaApiApplication.class, args);
+  }
 }

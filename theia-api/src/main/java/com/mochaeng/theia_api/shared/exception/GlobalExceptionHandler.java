@@ -15,104 +15,68 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
 @Slf4j
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(DocumentValidationException.class)
-    public ResponseEntity<ErrorResponse> handleValidationException(
-        DocumentValidationException ex,
-        WebRequest request
-    ) {
-        log.warn("Validation error: {} - {}", ex.getErrorCode(), ex.getMessage());
+  @ExceptionHandler(DocumentValidationException.class)
+  public ResponseEntity<ErrorResponse> handleValidationException(
+      DocumentValidationException ex, WebRequest request) {
+    log.warn("Validation error: {} - {}", ex.getErrorCode(), ex.getMessage());
 
-        ErrorResponse errorResponse = new ErrorResponse(
-            ex.getErrorCodeValue(),
-            ex.getMessage(),
-            extractPath(request)
-        );
+    ErrorResponse errorResponse =
+        new ErrorResponse(ex.getErrorCodeValue(), ex.getMessage(), extractPath(request));
 
-        return ResponseEntity.badRequest().body(errorResponse);
-    }
+    return ResponseEntity.badRequest().body(errorResponse);
+  }
 
-    @ExceptionHandler(DocumentProcessingException.class)
-    public ResponseEntity<ErrorResponse> handleDocumentProcessingException(
-        DocumentProcessingException ex,
-        WebRequest request
-    ) {
-        log.error(
-            "Document processing error: {} - {}",
-            ex.getErrorCode(),
-            ex.getMessage(), ex
-        );
+  @ExceptionHandler(DocumentProcessingException.class)
+  public ResponseEntity<ErrorResponse> handleDocumentProcessingException(
+      DocumentProcessingException ex, WebRequest request) {
+    log.error("Document processing error: {} - {}", ex.getErrorCode(), ex.getMessage(), ex);
 
-        ErrorResponse errorResponse = new ErrorResponse(
-            ex.getErrorCode(),
-            ex.getMessage(),
-            extractPath(request)
-        );
+    ErrorResponse errorResponse =
+        new ErrorResponse(ex.getErrorCode(), ex.getMessage(), extractPath(request));
 
-        return ResponseEntity
-            .status(HttpStatus.INTERNAL_SERVER_ERROR)
-            .body(errorResponse);
-    }
+    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+  }
 
-    @ExceptionHandler(MaxUploadSizeExceededException.class)
-    public ResponseEntity<ErrorResponse> handleMaxUploadSizeExceeded(
-        MaxUploadSizeExceededException ex,
-        WebRequest request
-    ) {
-        log.warn("Upload size exceeded: {}", ex.getMessage());
+  @ExceptionHandler(MaxUploadSizeExceededException.class)
+  public ResponseEntity<ErrorResponse> handleMaxUploadSizeExceeded(
+      MaxUploadSizeExceededException ex, WebRequest request) {
+    log.warn("Upload size exceeded: {}", ex.getMessage());
 
-        ErrorResponse errorResponse = new ErrorResponse(
+    ErrorResponse errorResponse =
+        new ErrorResponse(
             "FILE_SIZE_EXCEEDED",
             "File size exceeds the maximum allowed limit",
-            extractPath(request)
-        );
+            extractPath(request));
 
-        return ResponseEntity
-            .status(HttpStatus.PAYLOAD_TOO_LARGE)
-            .body(errorResponse);
-    }
+    return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(errorResponse);
+  }
 
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ErrorResponse> handleIllegalArgument(
-        IllegalArgumentException ex,
-        WebRequest request
-    ) {
-        log.warn("Invalid argument: {}", ex.getMessage());
+  @ExceptionHandler(IllegalArgumentException.class)
+  public ResponseEntity<ErrorResponse> handleIllegalArgument(
+      IllegalArgumentException ex, WebRequest request) {
+    log.warn("Invalid argument: {}", ex.getMessage());
 
-        ErrorResponse errorResponse = new ErrorResponse(
-            "INVALID_ARGUMENT",
-            "Invalid input provided",
-            extractPath(request)
-        );
+    ErrorResponse errorResponse =
+        new ErrorResponse("INVALID_ARGUMENT", "Invalid input provided", extractPath(request));
 
-        return ResponseEntity.badRequest().body(errorResponse);
-    }
+    return ResponseEntity.badRequest().body(errorResponse);
+  }
 
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleGenericException(
-        Exception ex,
-        WebRequest request
-    ) {
-        log.error(
-            "Unexpected error occurred: {} - {}",
-            ex.getClass().getSimpleName(),
-            ex.getMessage(),
-            ex
-        );
+  @ExceptionHandler(Exception.class)
+  public ResponseEntity<ErrorResponse> handleGenericException(Exception ex, WebRequest request) {
+    log.error(
+        "Unexpected error occurred: {} - {}", ex.getClass().getSimpleName(), ex.getMessage(), ex);
 
-        ErrorResponse errorResponse = new ErrorResponse(
+    ErrorResponse errorResponse =
+        new ErrorResponse(
             "INTERNAL_ERROR",
             "An unexpected error occurred. Please try again later.",
-            extractPath(request)
-        );
+            extractPath(request));
 
-        return ResponseEntity
-            .status(HttpStatus.INTERNAL_SERVER_ERROR)
-            .body(errorResponse);
-    }
+    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+  }
 
-    private String extractPath(WebRequest request) {
-        return request
-            .getDescription(false)
-            .replace("uri=", "");
-    }
+  private String extractPath(WebRequest request) {
+    return request.getDescription(false).replace("uri=", "");
+  }
 }

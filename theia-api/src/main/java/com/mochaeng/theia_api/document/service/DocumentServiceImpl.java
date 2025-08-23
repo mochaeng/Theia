@@ -8,13 +8,13 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class DocumentServiceImpl implements DocumentService {
-    private final DocumentValidationService validationService;
-    private final StorageService storageService;
+  private final DocumentValidationService validationService;
+  private final StorageService storageService;
 
-    @Override
-    public void uploadDocument(Document document) {
-        validationService.validateDocument(document);
+  @Override
+  public void uploadDocument(Document document) {
+    validationService.validateDocument(document);
 
-        storageService.storeDocument(document);
-    }
+    storageService.storeDocument(document);
+  }
 }
