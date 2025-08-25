@@ -24,6 +24,8 @@ Test code:
 
 ##### Code formatter
 
+First install `java-prettier`
+
 ```shell
 ./gradlew spotlessApply
 ```

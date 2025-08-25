@@ -8,24 +8,31 @@ import org.springframework.stereotype.Service;
 @Service
 @Slf4j
 public class VirusScanServiceImpl implements VirusScanService {
-  @Override
-  public boolean hasVirus(Document document) {
-    log.debug("Performing virus scan for file: {}", document.filename());
-    return containsSuspiciousPatterns(document);
-  }
 
-  private boolean containsSuspiciousPatterns(Document document) {
-    byte[] content = document.content();
-
-    if (content == null || content.length < 4) {
-      return false;
+    @Override
+    public boolean hasVirus(Document document) {
+        log.debug("Performing virus scan for file: {}", document.filename());
+        return containsSuspiciousPatterns(document);
     }
 
-    String contentStr =
-        new String(content, 0, Math.min(1000, content.length), StandardCharsets.UTF_8);
+    private boolean containsSuspiciousPatterns(Document document) {
+        byte[] content = document.content();
 
-    return contentStr.contains("javascript")
-        || contentStr.contains("/JavaScript")
-        || contentStr.contains("eval(");
-  }
+        if (content == null || content.length < 4) {
+            return false;
+        }
+
+        String contentStr = new String(
+            content,
+            0,
+            Math.min(1000, content.length),
+            StandardCharsets.UTF_8
+        );
+
+        return (
+            contentStr.contains("javascript") ||
+            contentStr.contains("/JavaScript") ||
+            contentStr.contains("eval(")
+        );
+    }
 }

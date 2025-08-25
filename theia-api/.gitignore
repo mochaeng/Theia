@@ -37,4 +37,7 @@ out/
 .vscode/
 
 
+### NODE ###
+node_modules/
+
 .env

@@ -1,7 +1,7 @@
 package com.mochaeng.theia_api.storage.s3;
 
 import com.mochaeng.theia_api.document.model.Document;
-import com.mochaeng.theia_api.shared.config.S3Properties;
+import com.mochaeng.theia_api.shared.config.s3.S3Properties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -13,24 +13,33 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 @RequiredArgsConstructor
 @Slf4j
 public class S3StorageService implements StorageService {
-  private final S3Client s3;
-  private final S3Properties s3Props;
 
-  @Override
-  public void storeDocument(Document document) {
-    try {
-      PutObjectRequest request =
-          PutObjectRequest.builder()
-              .bucket(s3Props.bucketName())
-              .key(document.filename())
-              .contentType(document.contentType())
-              .build();
+    private final S3Client s3;
+    private final S3Properties s3Props;
 
-      s3.putObject(request, RequestBody.fromBytes(document.content()));
+    @Override
+    public String storeDocument(Document document) {
+        try {
+            log.info("Storing document: {}", document);
 
-      log.info("store document successfully");
-    } catch (Exception e) {
-      throw new RuntimeException("error uploading document: " + e.getMessage(), e);
+            String key = "incoming/" + document.filename();
+
+            PutObjectRequest request = PutObjectRequest.builder()
+                .bucket(s3Props.bucketName())
+                .key(key)
+                .contentType(document.contentType())
+                .build();
+
+            s3.putObject(request, RequestBody.fromBytes(document.content()));
+
+            log.info("document stored successfully");
+
+            return s3Props.bucketName() + key;
+        } catch (Exception e) {
+            throw new RuntimeException(
+                "error uploading document: " + e.getMessage(),
+                e
+            );
+        }
     }
-  }
 }

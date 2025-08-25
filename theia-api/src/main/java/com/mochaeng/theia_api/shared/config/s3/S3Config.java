@@ -1,4 +1,4 @@
-package com.mochaeng.theia_api.shared.config;
+package com.mochaeng.theia_api.shared.config.s3;
 
 import java.net.URI;
 import org.springframework.context.annotation.Bean;
@@ -12,21 +12,22 @@ import software.amazon.awssdk.services.s3.S3ClientBuilder;
 @Configuration
 public class S3Config {
 
-  @Bean
-  public S3Client s3Client(S3Properties props) {
-    AwsBasicCredentials credentials =
-        AwsBasicCredentials.create(props.accessKey(), props.secretAccessKey());
+    @Bean
+    public S3Client s3Client(S3Properties props) {
+        AwsBasicCredentials credentials = AwsBasicCredentials.create(
+            props.accessKey(),
+            props.secretAccessKey()
+        );
 
-    S3ClientBuilder clientBuilder =
-        S3Client.builder()
+        S3ClientBuilder clientBuilder = S3Client.builder()
             .region(Region.of(props.region()))
             .credentialsProvider(StaticCredentialsProvider.create(credentials))
             .forcePathStyle(props.pathStyleAccess());
 
-    if (props.endpoint() != null && !props.endpoint().trim().isEmpty()) {
-      clientBuilder.endpointOverride(URI.create(props.endpoint()));
-    }
+        if (props.endpoint() != null && !props.endpoint().trim().isEmpty()) {
+            clientBuilder.endpointOverride(URI.create(props.endpoint()));
+        }
 
-    return clientBuilder.build();
-  }
+        return clientBuilder.build();
+    }
 }

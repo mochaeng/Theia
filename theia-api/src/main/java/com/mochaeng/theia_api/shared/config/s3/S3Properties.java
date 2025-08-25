@@ -1,4 +1,4 @@
-package com.mochaeng.theia_api.shared.config;
+package com.mochaeng.theia_api.shared.config.s3;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
@@ -9,4 +9,5 @@ public record S3Properties(
     String secretAccessKey,
     String region,
     boolean pathStyleAccess,
-    String endpoint) {}
+    String endpoint
+) {}

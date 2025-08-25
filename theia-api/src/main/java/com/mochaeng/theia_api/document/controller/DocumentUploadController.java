@@ -19,24 +19,32 @@ import org.springframework.web.multipart.MultipartFile;
 @RequiredArgsConstructor
 @Slf4j
 public class DocumentUploadController {
-  private final DocumentService documentService;
 
-  @PostMapping(
-      value = "/upload-document",
-      consumes = MediaType.MULTIPART_FORM_DATA_VALUE,
-      produces = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<UploadDocumentResponse> uploadDocument(
-      @RequestParam("file") MultipartFile file) throws IOException {
-    log.info(
-        "Receive upload request for file: {} (size: {} bytes)",
-        file.getOriginalFilename(),
-        file.getSize());
+    private final DocumentService documentService;
 
-    Document document =
-        Document.create(file.getOriginalFilename(), file.getContentType(), file.getBytes());
+    @PostMapping(
+        value = "/upload-document",
+        consumes = MediaType.MULTIPART_FORM_DATA_VALUE,
+        produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    public ResponseEntity<UploadDocumentResponse> uploadDocument(
+        @RequestParam("file") MultipartFile file
+    ) throws IOException {
+        log.info(
+            "Receive upload request for file: {} (size: {} bytes)",
+            file.getOriginalFilename(),
+            file.getSize()
+        );
 
-    documentService.uploadDocument(document);
+        Document document = Document.create(
+            file.getContentType(),
+            file.getBytes()
+        );
 
-    return ResponseEntity.ok(new UploadDocumentResponse(document.id().toString()));
-  }
+        documentService.uploadDocument(document);
+
+        return ResponseEntity.ok(
+            new UploadDocumentResponse(document.id().toString())
+        );
+    }
 }

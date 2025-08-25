@@ -16,90 +16,129 @@ import org.springframework.stereotype.Service;
 
 @Service
 @Slf4j
-public class DocumentValidationServiceImpl implements DocumentValidationService {
-  private final long maxFileSizeBytes;
-  private final List<String> allowedContentTypes;
-  private final VirusScanService virusScanService;
+public class DocumentValidationServiceImpl
+    implements DocumentValidationService {
 
-  public DocumentValidationServiceImpl(
-      @Value("${app.upload.max-file-size:10485760}") long maxFileSizeBytes,
-      @Value("${app.upload.allowed-content-types:application/pdf}")
-          List<String> allowedContentTypes,
-      VirusScanService virusScanService) {
-    this.maxFileSizeBytes = maxFileSizeBytes;
-    this.allowedContentTypes = List.copyOf(allowedContentTypes);
-    this.virusScanService = virusScanService;
-  }
+    private final long maxFileSizeBytes;
+    private final List<String> allowedContentTypes;
+    private final VirusScanService virusScanService;
 
-  @Override
-  public void validateDocument(Document document) {
-    log.debug("Validating document: {}", document.filename());
-
-    validateFileSize(document);
-    validatePdfMagicBytes(document);
-    validateStructure(document);
-    validateFileType(document);
-    validateVirusFree(document);
-
-    log.debug("Document validation completed successfully for: {}", document.filename());
-  }
-
-  private void validatePdfMagicBytes(Document document) {
-    byte[] content = document.content();
-    if (content == null) {
-      throw new DocumentValidationException(DocumentValidationErrorCode.INVALID_PDF);
+    public DocumentValidationServiceImpl(
+        @Value("${app.upload.max-file-size:10485760}") long maxFileSizeBytes,
+        @Value("${app.upload.allowed-content-types:application/pdf}") List<
+            String
+        > allowedContentTypes,
+        VirusScanService virusScanService
+    ) {
+        this.maxFileSizeBytes = maxFileSizeBytes;
+        this.allowedContentTypes = List.copyOf(allowedContentTypes);
+        this.virusScanService = virusScanService;
     }
-    if (content.length < 5
-        || !(new String(content, 0, 5, StandardCharsets.UTF_8).startsWith("%PDF-"))) {
-      throw new DocumentValidationException(DocumentValidationErrorCode.INVALID_PDF);
-    }
-  }
 
-  private void validateStructure(Document document) {
-    try (ByteArrayInputStream inputStream = new ByteArrayInputStream(document.content())) {
-      validateBasicStructure(inputStream);
-    } catch (InvalidPasswordException e) {
-      throw new DocumentValidationException(DocumentValidationErrorCode.PDF_ENCRYPTED);
-    } catch (IOException e) {
-      throw new DocumentValidationException(DocumentValidationErrorCode.PDF_CORRUPTED);
-    }
-  }
+    @Override
+    public void validateDocument(Document document) {
+        log.debug("Validating document: {}", document.filename());
 
-  private void validateBasicStructure(ByteArrayInputStream inputStream) throws IOException {
-    try (PDDocument doc = Loader.loadPDF(inputStream.readAllBytes())) {
-      if (doc.getNumberOfPages() == 0) {
-        throw new DocumentValidationException(DocumentValidationErrorCode.PDF_EMPTY);
-      }
+        validateFileSize(document);
+        validatePdfMagicBytes(document);
+        validateStructure(document);
+        validateFileType(document);
+        validateVirusFree(document);
 
-      if (doc.isEncrypted()) {
-        throw new DocumentValidationException(DocumentValidationErrorCode.PDF_ENCRYPTED);
-      }
+        log.debug(
+            "Document validation completed successfully for: {}",
+            document.filename()
+        );
     }
-  }
 
-  private void validateFileType(Document document) {
-    if (document.contentType() == null || !allowedContentTypes.contains(document.contentType())) {
-      throw new DocumentValidationException(
-          DocumentValidationErrorCode.INVALID_FILE_TYPE,
-          String.format(
-              "File type '%s' is not allowed. Allowed types: %s",
-              document.contentType(), allowedContentTypes));
+    private void validatePdfMagicBytes(Document document) {
+        byte[] content = document.content();
+        if (content == null) {
+            throw new DocumentValidationException(
+                DocumentValidationErrorCode.INVALID_PDF
+            );
+        }
+        if (
+            content.length < 5 ||
+            !(new String(content, 0, 5, StandardCharsets.UTF_8).startsWith(
+                    "%PDF-"
+                ))
+        ) {
+            throw new DocumentValidationException(
+                DocumentValidationErrorCode.INVALID_PDF
+            );
+        }
     }
-  }
 
-  private void validateFileSize(Document document) {
-    if (document.content().length > maxFileSizeBytes) {
-      throw new DocumentValidationException(
-          DocumentValidationErrorCode.FILE_TOO_LARGE,
-          String.format(
-              "File size %d bytes exceeds maximum allowed size of %d bytes",
-              document.content().length, maxFileSizeBytes));
+    private void validateStructure(Document document) {
+        try (
+            ByteArrayInputStream inputStream = new ByteArrayInputStream(
+                document.content()
+            )
+        ) {
+            validateBasicStructure(inputStream);
+        } catch (InvalidPasswordException e) {
+            throw new DocumentValidationException(
+                DocumentValidationErrorCode.PDF_ENCRYPTED
+            );
+        } catch (IOException e) {
+            throw new DocumentValidationException(
+                DocumentValidationErrorCode.PDF_CORRUPTED
+            );
+        }
     }
-  }
 
-  private void validateVirusFree(Document document) {
-    if (virusScanService.hasVirus(document)) {
-      throw new DocumentValidationException(DocumentValidationErrorCode.VIRUS_DETECTED);
+    private void validateBasicStructure(ByteArrayInputStream inputStream)
+        throws IOException {
+        try (PDDocument doc = Loader.loadPDF(inputStream.readAllBytes())) {
+            if (doc.getNumberOfPages() == 0) {
+                throw new DocumentValidationException(
+                    DocumentValidationErrorCode.PDF_EMPTY
+                );
+            }
+
+            if (doc.isEncrypted()) {
+                throw new DocumentValidationException(
+                    DocumentValidationErrorCode.PDF_ENCRYPTED
+                );
+            }
+        }
     }
-  }
+
+    private void validateFileType(Document document) {
+        if (
+            document.contentType() == null ||
+            !allowedContentTypes.contains(document.contentType())
+        ) {
+            throw new DocumentValidationException(
+                DocumentValidationErrorCode.INVALID_FILE_TYPE,
+                String.format(
+                    "File type '%s' is not allowed. Allowed types: %s",
+                    document.contentType(),
+                    allowedContentTypes
+                )
+            );
+        }
+    }
+
+    private void validateFileSize(Document document) {
+        if (document.content().length > maxFileSizeBytes) {
+            throw new DocumentValidationException(
+                DocumentValidationErrorCode.FILE_TOO_LARGE,
+                String.format(
+                    "File size %d bytes exceeds maximum allowed size of %d bytes",
+                    document.content().length,
+                    maxFileSizeBytes
+                )
+            );
+        }
+    }
+
+    private void validateVirusFree(Document document) {
+        if (virusScanService.hasVirus(document)) {
+            throw new DocumentValidationException(
+                DocumentValidationErrorCode.VIRUS_DETECTED
+            );
+        }
+    }
 }
