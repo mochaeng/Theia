@@ -22,7 +22,7 @@ public class S3StorageService implements StorageService {
         try {
             log.info("Storing document: {}", document);
 
-            String key = "incoming/" + document.filename();
+            String key = "/incoming/" + document.filename();
 
             PutObjectRequest request = PutObjectRequest.builder()
                 .bucket(s3Props.bucketName())
