@@ -2,8 +2,6 @@ package com.mochaeng.theia_api.shared.config.kafka;
 
 import java.util.HashMap;
 import java.util.Map;
-
-import com.mochaeng.theia_api.document.model.Document;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -86,6 +84,22 @@ public class KafkaConfig {
         ConcurrentKafkaListenerContainerFactory<String, Object> factory =
             new ConcurrentKafkaListenerContainerFactory<>();
 
+        factory.setConsumerFactory(consumerFactory());
+        factory
+            .getContainerProperties()
+            .setAckMode(ContainerProperties.AckMode.MANUAL);
+        factory.setConcurrency(1);
+
+        return factory;
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<
+        String,
+        Object
+    > vectorizerKafkaListenerContainerFactory() {
+        ConcurrentKafkaListenerContainerFactory<String, Object> factory =
+            new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory());
         factory
             .getContainerProperties()

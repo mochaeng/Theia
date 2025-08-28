@@ -2,7 +2,7 @@
 
 ## Running
 
-##### Tests
+#### Tests
 
 ```shell
 ./gradlew test

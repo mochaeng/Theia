@@ -1,7 +1,6 @@
 package com.mochaeng.theia_api.shared.exception;
 
-import com.mochaeng.theia_api.document.exception.DocumentProcessingException;
-import com.mochaeng.theia_api.document.exception.DocumentValidationException;
+import com.mochaeng.theia_api.ingestion.domain.exceptions.DocumentValidationException;
 import com.mochaeng.theia_api.shared.dto.ErrorResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -35,28 +34,28 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(errorResponse);
     }
 
-    @ExceptionHandler(DocumentProcessingException.class)
-    public ResponseEntity<ErrorResponse> handleDocumentProcessingException(
-        DocumentProcessingException ex,
-        WebRequest request
-    ) {
-        log.error(
-            "Document processing error: {} - {}",
-            ex.getErrorCode(),
-            ex.getMessage(),
-            ex
-        );
-
-        ErrorResponse errorResponse = new ErrorResponse(
-            ex.getErrorCode(),
-            ex.getMessage(),
-            extractPath(request)
-        );
-
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
-            errorResponse
-        );
-    }
+    //    @ExceptionHandler(DocumentProcessingException.class)
+    //    public ResponseEntity<ErrorResponse> handleDocumentProcessingException(
+    //        DocumentProcessingException ex,
+    //        WebRequest request
+    //    ) {
+    //        log.error(
+    //            "Document processing error: {} - {}",
+    //            ex.getErrorCode(),
+    //            ex.getMessage(),
+    //            ex
+    //        );
+    //
+    //        ErrorResponse errorResponse = new ErrorResponse(
+    //            ex.getErrorCode(),
+    //            ex.getMessage(),
+    //            extractPath(request)
+    //        );
+    //
+    //        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+    //            errorResponse
+    //        );
+    //    }
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<ErrorResponse> handleMaxUploadSizeExceeded(
