@@ -1,10 +1,8 @@
 package com.mochaeng.theia_api.ingestion.infrastructure.messaging;
 
-import com.mochaeng.theia_api.ingestion.application.port.out.PublishUploadedDocumentEventPort;
+import com.mochaeng.theia_api.ingestion.application.port.out.PublishUploadedDocumentPort;
 import com.mochaeng.theia_api.shared.application.events.DocumentUploadedEvent;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -14,7 +12,7 @@ import org.springframework.stereotype.Component;
 @Component("kafkaPublishUploadedDocument")
 @Slf4j
 public class KafkaPublishUploadedDocumentEvent
-    implements PublishUploadedDocumentEventPort {
+    implements PublishUploadedDocumentPort {
 
     private final KafkaTemplate<String, Object> kafkaTemplate;
     private final String documentUploadedTopic;
@@ -22,7 +20,7 @@ public class KafkaPublishUploadedDocumentEvent
     @Autowired
     public KafkaPublishUploadedDocumentEvent(
         KafkaTemplate<String, Object> kafkaTemplate,
-        @Value("${kafka.topics.pdf-uploaded}") String documentUploadedTopic
+        @Value("${kafka.topics.document-uploaded}") String documentUploadedTopic
     ) {
         this.kafkaTemplate = new KafkaTemplate<>(
             kafkaTemplate.getProducerFactory()

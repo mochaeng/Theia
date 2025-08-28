@@ -12,7 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mochaeng.theia_api.ingestion.application.port.in.UploadDocumentUseCase;
 import com.mochaeng.theia_api.ingestion.application.port.in.ValidateDocumentUseCase;
 import com.mochaeng.theia_api.ingestion.application.port.out.FileStoragePort;
-import com.mochaeng.theia_api.ingestion.application.port.out.PublishUploadedDocumentEventPort;
+import com.mochaeng.theia_api.ingestion.application.port.out.PublishUploadedDocumentPort;
 import com.mochaeng.theia_api.ingestion.application.port.out.ScanVirusPort;
 import com.mochaeng.theia_api.ingestion.application.service.UploadDocumentService;
 import com.mochaeng.theia_api.ingestion.application.service.ValidateDocumentService;
@@ -63,7 +63,7 @@ public class DocumentUploadControllerTest {
     private ScanVirusPort virusScanService;
 
     @MockitoBean
-    private PublishUploadedDocumentEventPort kafkaEventPublisher;
+    private PublishUploadedDocumentPort kafkaEventPublisher;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -302,7 +302,7 @@ public class DocumentUploadControllerTest {
         public UploadDocumentUseCase documentService(
             ValidateDocumentUseCase documentValidationService,
             FileStoragePort storageService,
-            PublishUploadedDocumentEventPort kafkaEventPublisher
+            PublishUploadedDocumentPort kafkaEventPublisher
         ) {
             return new UploadDocumentService(
                 documentValidationService,

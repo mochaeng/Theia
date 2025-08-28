@@ -52,6 +52,19 @@ public class ValidateDocumentService implements ValidateDocumentUseCase {
         );
     }
 
+    private void validateFileSize(Document document) {
+        if (document.content().length > maxFileSizeBytes) {
+            throw new DocumentValidationException(
+                DocumentValidationErrorCode.FILE_TOO_LARGE,
+                String.format(
+                    "File size %d bytes exceeds maximum allowed size of %d bytes",
+                    document.content().length,
+                    maxFileSizeBytes
+                )
+            );
+        }
+    }
+
     private void validatePdfMagicBytes(Document document) {
         byte[] content = document.content();
         if (content == null) {
@@ -117,19 +130,6 @@ public class ValidateDocumentService implements ValidateDocumentUseCase {
                     "File type '%s' is not allowed. Allowed types: %s",
                     document.contentType(),
                     allowedContentTypes
-                )
-            );
-        }
-    }
-
-    private void validateFileSize(Document document) {
-        if (document.content().length > maxFileSizeBytes) {
-            throw new DocumentValidationException(
-                DocumentValidationErrorCode.FILE_TOO_LARGE,
-                String.format(
-                    "File size %d bytes exceeds maximum allowed size of %d bytes",
-                    document.content().length,
-                    maxFileSizeBytes
                 )
             );
         }

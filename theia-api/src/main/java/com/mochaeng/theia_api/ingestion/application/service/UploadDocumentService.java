@@ -3,7 +3,7 @@ package com.mochaeng.theia_api.ingestion.application.service;
 import com.mochaeng.theia_api.ingestion.application.port.in.UploadDocumentUseCase;
 import com.mochaeng.theia_api.ingestion.application.port.in.ValidateDocumentUseCase;
 import com.mochaeng.theia_api.ingestion.application.port.out.FileStoragePort;
-import com.mochaeng.theia_api.ingestion.application.port.out.PublishUploadedDocumentEventPort;
+import com.mochaeng.theia_api.ingestion.application.port.out.PublishUploadedDocumentPort;
 import com.mochaeng.theia_api.ingestion.domain.model.Document;
 import com.mochaeng.theia_api.shared.application.events.DocumentUploadedEvent;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +17,7 @@ public class UploadDocumentService implements UploadDocumentUseCase {
 
     private final ValidateDocumentUseCase validateDocument;
     private final FileStoragePort fileStorage;
-    private final PublishUploadedDocumentEventPort publishUploadedDocumentEvent;
+    private final PublishUploadedDocumentPort publishUploadedDocumentEvent;
 
     @Override
     public void uploadDocument(Document document) {

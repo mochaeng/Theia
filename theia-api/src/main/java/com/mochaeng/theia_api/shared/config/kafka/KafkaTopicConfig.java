@@ -15,13 +15,13 @@ public class KafkaTopicConfig {
     @Value("${spring.kafka.bootstrap-servers}")
     private String bootstrapServers;
 
-    @Value("${kafka.topics.pdf-uploaded}")
+    @Value("${kafka.topics.document-uploaded}")
     private String documentUploadedTopic;
 
-    @Value("${kafka.topics.pdf-processed}")
+    @Value("${kafka.topics.document-processed}")
     private String documentProcessedTopic;
 
-    @Value("${kafka.topics.pdf-failed}")
+    @Value("${kafka.topics.document-failed}")
     private String documentFailedTopic;
 
     @Bean
