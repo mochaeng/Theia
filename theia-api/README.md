@@ -1,5 +1,13 @@
 # Theia API
 
+## Grobid
+
+To use the **lightweight** model (CRF)
+
+```shell
+docker run --rm --init --ulimit core=0 -p 8070:8070 lfoppiano/grobid:latest-crf
+```
+
 ## Running
 
 #### Tests

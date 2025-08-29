@@ -1,6 +1,7 @@
 package com.mochaeng.theia_api.shared.exception;
 
 import com.mochaeng.theia_api.ingestion.domain.exceptions.DocumentValidationException;
+import com.mochaeng.theia_api.processing.application.exceptions.DownloadDocumentException;
 import com.mochaeng.theia_api.shared.dto.ErrorResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -33,6 +34,14 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.badRequest().body(errorResponse);
     }
+
+    //    public ResponseEntity<ErrorResponse> handleDownloadDocumentException(
+    //        DownloadDocumentException ex,
+    //        WebRequest request
+    //    ) {
+    //        log.warn("Downloading document file failed: {}", ex.getMessage());
+    //
+    //    }
 
     //    @ExceptionHandler(DocumentProcessingException.class)
     //    public ResponseEntity<ErrorResponse> handleDocumentProcessingException(

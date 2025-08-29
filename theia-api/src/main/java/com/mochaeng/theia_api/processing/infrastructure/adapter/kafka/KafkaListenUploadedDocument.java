@@ -1,7 +1,7 @@
-package com.mochaeng.theia_api.processing.infrastructure.messaging;
+package com.mochaeng.theia_api.processing.infrastructure.adapter.kafka;
 
 import com.mochaeng.theia_api.processing.application.port.in.ProcessUploadedDocumentUseCase;
-import com.mochaeng.theia_api.shared.application.events.DocumentUploadedEvent;
+import com.mochaeng.theia_api.shared.application.dto.DocumentUploadedMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -23,7 +23,7 @@ public class KafkaListenUploadedDocument {
         containerFactory = "kafkaListenerContainerFactory"
     )
     public void receiveUploadedDocument(
-        @Payload DocumentUploadedEvent event,
+        @Payload DocumentUploadedMessage event,
         @Header(KafkaHeaders.RECEIVED_TOPIC) String topic,
         @Header(KafkaHeaders.RECEIVED_PARTITION) int partition,
         @Header(KafkaHeaders.RECEIVED_KEY) String key,

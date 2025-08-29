@@ -1,4 +1,4 @@
-package com.mochaeng.theia_api.ingestion.infrastructure.storage;
+package com.mochaeng.theia_api.ingestion.infrastructure.adapter.s3;
 
 import com.mochaeng.theia_api.ingestion.application.port.out.FileStoragePort;
 import com.mochaeng.theia_api.ingestion.domain.model.Document;
@@ -6,7 +6,6 @@ import com.mochaeng.theia_api.shared.config.s3.S3Properties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.springframework.stereotype.Service;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
@@ -36,7 +35,7 @@ public class S3FileStorage implements FileStoragePort {
 
             log.info("document stored successfully");
 
-            return s3Props.bucketName() + key;
+            return key;
         } catch (Exception e) {
             throw new RuntimeException(
                 "error uploading document: " + e.getMessage(),

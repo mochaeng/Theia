@@ -5,7 +5,7 @@ import com.mochaeng.theia_api.ingestion.application.port.in.ValidateDocumentUseC
 import com.mochaeng.theia_api.ingestion.application.port.out.FileStoragePort;
 import com.mochaeng.theia_api.ingestion.application.port.out.PublishUploadedDocumentPort;
 import com.mochaeng.theia_api.ingestion.domain.model.Document;
-import com.mochaeng.theia_api.shared.application.events.DocumentUploadedEvent;
+import com.mochaeng.theia_api.shared.application.dto.DocumentUploadedMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -25,7 +25,7 @@ public class UploadDocumentService implements UploadDocumentUseCase {
 
         String s3Path = fileStorage.storeDocument(document);
 
-        DocumentUploadedEvent event = DocumentUploadedEvent.create(
+        DocumentUploadedMessage event = DocumentUploadedMessage.create(
             document.id(),
             document.filename(),
             s3Path,

@@ -1,4 +1,4 @@
-package com.mochaeng.theia_api.shared.application.events;
+package com.mochaeng.theia_api.shared.application.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.LocalDateTime;

@@ -1,7 +1,7 @@
-package com.mochaeng.theia_api.ingestion.infrastructure.messaging;
+package com.mochaeng.theia_api.ingestion.infrastructure.adapter.kafka;
 
 import com.mochaeng.theia_api.ingestion.application.port.out.PublishUploadedDocumentPort;
-import com.mochaeng.theia_api.shared.application.events.DocumentUploadedEvent;
+import com.mochaeng.theia_api.shared.application.dto.DocumentUploadedMessage;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,7 +29,7 @@ public class KafkaPublishUploadedDocumentEvent
     }
 
     @Override
-    public void publish(DocumentUploadedEvent event) {
+    public void publish(DocumentUploadedMessage event) {
         publishEvent(
             documentUploadedTopic,
             event.documentID().toString(),

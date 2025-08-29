@@ -9,6 +9,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -53,12 +54,14 @@ public class ValidateDocumentService implements ValidateDocumentUseCase {
     }
 
     private void validateFileSize(Document document) {
-        if (document.content().length > maxFileSizeBytes) {
+        if (
+            Objects.requireNonNull(document.content()).length > maxFileSizeBytes
+        ) {
             throw new DocumentValidationException(
                 DocumentValidationErrorCode.FILE_TOO_LARGE,
                 String.format(
                     "File size %d bytes exceeds maximum allowed size of %d bytes",
-                    document.content().length,
+                    Objects.requireNonNull(document.content()).length,
                     maxFileSizeBytes
                 )
             );
@@ -87,7 +90,7 @@ public class ValidateDocumentService implements ValidateDocumentUseCase {
     private void validateStructure(Document document) {
         try (
             ByteArrayInputStream inputStream = new ByteArrayInputStream(
-                document.content()
+                Objects.requireNonNull(document.content())
             )
         ) {
             validateBasicStructure(inputStream);
