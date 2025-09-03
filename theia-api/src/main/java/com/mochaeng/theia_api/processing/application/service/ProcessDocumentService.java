@@ -1,10 +1,12 @@
 package com.mochaeng.theia_api.processing.application.service;
 
-import com.mochaeng.theia_api.processing.application.port.in.ProcessUploadedDocumentUseCase;
+import com.mochaeng.theia_api.processing.application.dto.FieldEmbedding;
+import com.mochaeng.theia_api.processing.application.port.in.ProcessDocumentUseCase;
 import com.mochaeng.theia_api.processing.application.port.out.DownloadDocumentPort;
 import com.mochaeng.theia_api.processing.application.port.out.ExtractDocumentDataPort;
 import com.mochaeng.theia_api.processing.application.port.out.GenerateDocumentEmbeddingPort;
 import com.mochaeng.theia_api.shared.application.dto.DocumentUploadedMessage;
+import java.util.Arrays;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -12,8 +14,7 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class ProcessUploadedDocumentService
-    implements ProcessUploadedDocumentUseCase {
+public class ProcessDocumentService implements ProcessDocumentUseCase {
 
     private final DownloadDocumentPort downloadDocument;
     private final ExtractDocumentDataPort extractDocumentData;
@@ -21,7 +22,7 @@ public class ProcessUploadedDocumentService
 
     @Override
     public void process(DocumentUploadedMessage message) {
-        log.info("Processing uploaded document event");
+        log.info("Processing uploaded document message event");
 
         var downloadResult = downloadDocument.download(message);
         if (!downloadResult.isSuccess()) {
@@ -49,6 +50,14 @@ public class ProcessUploadedDocumentService
         }
 
         log.info("Embeddings generated successfully");
-        log.info(embeddingsResult.embedding().fieldEmbeddings().toString());
+        for (FieldEmbedding fieldEmbedding : embeddingsResult
+            .embedding()
+            .fieldEmbeddings()) {
+            log.info(
+                "Field: {}, Embedding: {}",
+                fieldEmbedding.fieldName(),
+                Arrays.toString(fieldEmbedding.embedding())
+            );
+        }
     }
 }

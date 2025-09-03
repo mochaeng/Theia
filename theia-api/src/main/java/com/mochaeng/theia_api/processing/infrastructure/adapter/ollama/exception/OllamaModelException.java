@@ -3,11 +3,10 @@ package com.mochaeng.theia_api.processing.infrastructure.adapter.ollama.exceptio
 public class OllamaModelException extends OllamaException {
 
     public OllamaModelException(String message) {
-        super(message);
+        super(message, "OLLAMA_MODEL_RESPONSE");
     }
 
-    @Override
-    public String getErrorCode() {
-        return "OLLAMA_MODEL_ERROR";
+    public OllamaModelException(String message, Throwable cause) {
+        super(message, "OLLAMA_MODEL_RESPONSE", cause);
     }
 }

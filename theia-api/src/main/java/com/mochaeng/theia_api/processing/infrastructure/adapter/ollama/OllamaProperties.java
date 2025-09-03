@@ -12,6 +12,7 @@ public class OllamaProperties {
 
     private String baseUrl = "http://localhost:11434";
     private String model = "nomic-embed-text";
+    private String keepAlive = "5m";
 
     private Duration connectTimeout = Duration.ofSeconds(10);
     private Duration readTimeout = Duration.ofSeconds(30);

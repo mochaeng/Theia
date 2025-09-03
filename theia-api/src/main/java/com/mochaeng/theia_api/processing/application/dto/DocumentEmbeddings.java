@@ -5,11 +5,11 @@ import java.util.UUID;
 import lombok.Builder;
 
 @Builder
-public record DocumentEmbedding(
+public record DocumentEmbeddings(
     UUID documentId,
     List<FieldEmbedding> fieldEmbeddings
 ) {
-    public DocumentEmbedding {
+    public DocumentEmbeddings {
         fieldEmbeddings = fieldEmbeddings == null
             ? List.of()
             : List.copyOf(fieldEmbeddings);

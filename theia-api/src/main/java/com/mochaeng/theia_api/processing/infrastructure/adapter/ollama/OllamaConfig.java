@@ -32,8 +32,15 @@ public class OllamaConfig {
             .defaultStatusHandler(
                 HttpStatusCode::is5xxServerError,
                 (request, response) -> {
+                    var body = new String(
+                        response.getBody().readAllBytes(),
+                        StandardCharsets.UTF_8
+                    );
                     throw new OllamaServerException(
-                        "Ollama server error: " + response.getStatusCode()
+                        "Ollama server error: %s - %s".formatted(
+                            response.getStatusCode(),
+                            body
+                        )
                     );
                 }
             )

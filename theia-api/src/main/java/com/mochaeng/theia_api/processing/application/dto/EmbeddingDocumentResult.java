@@ -5,11 +5,13 @@ import lombok.Builder;
 @Builder
 public record EmbeddingDocumentResult(
     boolean isSuccess,
-    DocumentEmbedding embedding,
+    DocumentEmbeddings embedding,
     String errorCode,
     String errorMessage
 ) {
-    public static EmbeddingDocumentResult success(DocumentEmbedding embedding) {
+    public static EmbeddingDocumentResult success(
+        DocumentEmbeddings embedding
+    ) {
         return EmbeddingDocumentResult.builder()
             .isSuccess(true)
             .embedding(embedding)

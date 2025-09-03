@@ -157,13 +157,24 @@ public class GrobidExtractDocumentData implements ExtractDocumentDataPort {
                 .retrieve()
                 .body(String.class);
         } catch (ResourceAccessException e) {
+            log.debug(
+                "ResourceAccessException for Grobid details - message: {}, cause: {}, cause type: {}",
+                e.getMessage(),
+                e.getCause(),
+                e.getCause() != null
+                    ? e.getCause().getClass().getName()
+                    : "null"
+            );
+
             Throwable cause = e.getCause();
+
             if (cause instanceof SocketTimeoutException) {
                 throw new GrobidTimeoutException(
                     "Timeout while calling Grobid",
                     cause
                 );
             }
+
             if (
                 cause instanceof java.net.ConnectException ||
                 cause instanceof java.net.UnknownHostException
@@ -173,6 +184,7 @@ public class GrobidExtractDocumentData implements ExtractDocumentDataPort {
                     cause
                 );
             }
+
             throw e;
         }
     }

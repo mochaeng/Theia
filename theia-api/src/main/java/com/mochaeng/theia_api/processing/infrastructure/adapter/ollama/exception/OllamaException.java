@@ -1,14 +1,20 @@
 package com.mochaeng.theia_api.processing.infrastructure.adapter.ollama.exception;
 
-public abstract class OllamaException extends RuntimeException {
+public class OllamaException extends RuntimeException {
 
-    protected OllamaException(String message) {
+    private final String errorCode;
+
+    public OllamaException(String message, String errorCode) {
         super(message);
+        this.errorCode = errorCode;
     }
 
-    protected OllamaException(String message, Throwable cause) {
+    public OllamaException(String message, String errorCode, Throwable cause) {
         super(message, cause);
+        this.errorCode = errorCode;
     }
 
-    public abstract String getErrorCode();
+    public String getErrorCode() {
+        return errorCode;
+    }
 }

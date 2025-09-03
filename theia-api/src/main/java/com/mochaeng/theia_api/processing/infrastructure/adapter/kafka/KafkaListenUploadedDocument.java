@@ -1,6 +1,6 @@
 package com.mochaeng.theia_api.processing.infrastructure.adapter.kafka;
 
-import com.mochaeng.theia_api.processing.application.port.in.ProcessUploadedDocumentUseCase;
+import com.mochaeng.theia_api.processing.application.port.in.ProcessDocumentUseCase;
 import com.mochaeng.theia_api.shared.application.dto.DocumentUploadedMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,7 +15,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class KafkaListenUploadedDocument {
 
-    private final ProcessUploadedDocumentUseCase processUploadedDocument;
+    private final ProcessDocumentUseCase processUploadedDocument;
 
     @KafkaListener(
         topics = "${kafka.topics.document-uploaded}",

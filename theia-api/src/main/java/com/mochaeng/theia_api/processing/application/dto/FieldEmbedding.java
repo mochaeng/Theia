@@ -1,11 +1,12 @@
 package com.mochaeng.theia_api.processing.application.dto;
 
+import com.mochaeng.theia_api.processing.domain.model.DocumentField;
 import com.mochaeng.theia_api.processing.domain.model.EmbeddingMetadata;
 import lombok.Builder;
 
 @Builder
 public record FieldEmbedding(
-    String fieldName,
+    DocumentField fieldName,
     Float[] embedding,
     String text,
     EmbeddingMetadata metadata

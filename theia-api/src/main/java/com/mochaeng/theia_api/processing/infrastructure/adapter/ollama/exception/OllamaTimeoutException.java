@@ -2,12 +2,11 @@ package com.mochaeng.theia_api.processing.infrastructure.adapter.ollama.exceptio
 
 public class OllamaTimeoutException extends OllamaException {
 
-    public OllamaTimeoutException(String message, Throwable cause) {
-        super(message, cause);
+    public OllamaTimeoutException(String message) {
+        super(message, "OLLAMA_TIMEOUT");
     }
 
-    @Override
-    public String getErrorCode() {
-        return "OLLAMA_TIMEOUT";
+    public OllamaTimeoutException(String message, Throwable cause) {
+        super(message, "OLLAMA_TIMEOUT", cause);
     }
 }

@@ -3,11 +3,10 @@ package com.mochaeng.theia_api.processing.infrastructure.adapter.ollama.exceptio
 public class OllamaClientException extends OllamaException {
 
     public OllamaClientException(String message) {
-        super(message);
+        super(message, "OLLAMA_CLIENT_ERROR");
     }
 
-    @Override
-    public String getErrorCode() {
-        return "OLLAMA_CLIENT_ERROR";
+    public OllamaClientException(String message, Throwable cause) {
+        super(message, "OLLAMA_CLIENT_ERROR", cause);
     }
 }
