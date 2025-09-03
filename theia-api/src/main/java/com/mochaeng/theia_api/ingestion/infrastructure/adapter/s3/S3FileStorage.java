@@ -3,6 +3,7 @@ package com.mochaeng.theia_api.ingestion.infrastructure.adapter.s3;
 import com.mochaeng.theia_api.ingestion.application.port.out.FileStoragePort;
 import com.mochaeng.theia_api.ingestion.domain.model.Document;
 import com.mochaeng.theia_api.shared.config.s3.S3Properties;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -31,7 +32,12 @@ public class S3FileStorage implements FileStoragePort {
                 .contentType(document.contentType())
                 .build();
 
-            s3.putObject(request, RequestBody.fromBytes(document.content()));
+            s3.putObject(
+                request,
+                RequestBody.fromBytes(
+                    Objects.requireNonNull(document.content())
+                )
+            );
 
             log.info("document stored successfully");
 

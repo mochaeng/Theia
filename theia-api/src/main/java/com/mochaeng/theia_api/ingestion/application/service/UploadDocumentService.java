@@ -6,6 +6,7 @@ import com.mochaeng.theia_api.ingestion.application.port.out.FileStoragePort;
 import com.mochaeng.theia_api.ingestion.application.port.out.PublishUploadedDocumentPort;
 import com.mochaeng.theia_api.ingestion.domain.model.Document;
 import com.mochaeng.theia_api.shared.application.dto.DocumentUploadedMessage;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -30,7 +31,7 @@ public class UploadDocumentService implements UploadDocumentUseCase {
             document.filename(),
             s3Path,
             document.contentType(),
-            document.content().length
+            Objects.requireNonNull(document.content()).length
         );
 
         publishUploadedDocumentEvent.publish(event);

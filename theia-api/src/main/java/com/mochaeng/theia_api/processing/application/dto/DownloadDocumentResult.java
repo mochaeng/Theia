@@ -4,7 +4,7 @@ import java.util.Arrays;
 import lombok.Builder;
 
 @Builder
-public record DocumentDownloadResult(
+public record DownloadDocumentResult(
     byte[] content,
     ErrorCode errorCode,
     String errorMessage
@@ -17,7 +17,7 @@ public record DocumentDownloadResult(
         UNEXPECTED_ERROR,
     }
 
-    public DocumentDownloadResult {
+    public DownloadDocumentResult {
         if (content != null) {
             content = Arrays.copyOf(content, content.length);
         }
@@ -31,15 +31,15 @@ public record DocumentDownloadResult(
         return Arrays.copyOf(content, content.length);
     }
 
-    public static DocumentDownloadResult success(byte[] content) {
-        return DocumentDownloadResult.builder().content(content).build();
+    public static DownloadDocumentResult success(byte[] content) {
+        return DownloadDocumentResult.builder().content(content).build();
     }
 
-    public static DocumentDownloadResult failure(
+    public static DownloadDocumentResult failure(
         ErrorCode errorCode,
         String errorMessage
     ) {
-        return DocumentDownloadResult.builder()
+        return DownloadDocumentResult.builder()
             .errorCode(errorCode)
             .errorMessage(errorMessage)
             .build();
