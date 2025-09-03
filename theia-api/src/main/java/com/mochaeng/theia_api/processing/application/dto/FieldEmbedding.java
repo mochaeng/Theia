@@ -10,11 +10,20 @@ public record FieldEmbedding(
     String text,
     EmbeddingMetadata metadata
 ) {
-    public boolean hasVector() {
+    public FieldEmbedding {
+        embedding = embedding == null ? null : embedding.clone();
+    }
+
+    public boolean hasEmbedding() {
         return embedding != null && embedding.length > 0;
     }
 
     public int dimensions() {
         return embedding != null ? embedding.length : 0;
+    }
+
+    @Override
+    public Float[] embedding() {
+        return embedding == null ? null : embedding.clone();
     }
 }

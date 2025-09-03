@@ -12,6 +12,10 @@ public record OllamaResponse(
 
     @JsonProperty("prompt_eval_count") int promptEvalCount
 ) {
+    public OllamaResponse {
+        embeddings = embeddings == null ? null : embeddings.clone();
+    }
+
     public boolean hasEmbeddings() {
         return (
             embeddings != null &&
@@ -26,5 +30,10 @@ public record OllamaResponse(
 
     public long getProcessingTimeMs() {
         return totalDuration / 1_000_000;
+    }
+
+    @Override
+    public Float[][] embeddings() {
+        return embeddings == null ? null : embeddings.clone();
     }
 }

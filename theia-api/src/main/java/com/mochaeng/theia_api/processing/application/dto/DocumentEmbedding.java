@@ -9,6 +9,12 @@ public record DocumentEmbedding(
     UUID documentId,
     List<FieldEmbedding> fieldEmbeddings
 ) {
+    public DocumentEmbedding {
+        fieldEmbeddings = fieldEmbeddings == null
+            ? List.of()
+            : List.copyOf(fieldEmbeddings);
+    }
+
     public boolean hasEmbeddings() {
         return fieldEmbeddings != null && !fieldEmbeddings.isEmpty();
     }

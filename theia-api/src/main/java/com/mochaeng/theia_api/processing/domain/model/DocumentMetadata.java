@@ -11,4 +11,10 @@ public record DocumentMetadata(
     String author,
     String abstractText,
     Map<String, Object> additionalMetadata
-) {}
+) {
+    public DocumentMetadata {
+        additionalMetadata = additionalMetadata == null
+            ? null
+            : Map.copyOf(additionalMetadata);
+    }
+}

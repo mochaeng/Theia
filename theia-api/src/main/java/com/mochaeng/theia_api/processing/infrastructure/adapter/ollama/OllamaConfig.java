@@ -4,6 +4,7 @@ import com.mochaeng.theia_api.processing.infrastructure.adapter.ollama.exception
 import com.mochaeng.theia_api.processing.infrastructure.adapter.ollama.exception.OllamaServerException;
 import com.mochaeng.theia_api.processing.infrastructure.adapter.ollama.exception.OllamaTimeoutException;
 import com.mochaeng.theia_api.shared.config.helpers.SharedConfigHelpers;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -39,7 +40,10 @@ public class OllamaConfig {
             .defaultStatusHandler(
                 HttpStatusCode::is4xxClientError,
                 (request, response) -> {
-                    var body = new String(response.getBody().readAllBytes());
+                    var body = new String(
+                        response.getBody().readAllBytes(),
+                        StandardCharsets.UTF_8
+                    );
                     throw new OllamaClientException(
                         "Ollama client error: %s - %s".formatted(
                             response.getStatusCode(),

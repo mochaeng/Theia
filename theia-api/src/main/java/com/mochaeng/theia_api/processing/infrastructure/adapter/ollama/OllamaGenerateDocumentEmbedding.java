@@ -8,7 +8,10 @@ import com.mochaeng.theia_api.processing.domain.model.DocumentMetadata;
 import com.mochaeng.theia_api.processing.domain.model.EmbeddingMetadata;
 import com.mochaeng.theia_api.processing.infrastructure.adapter.ollama.dto.OllamaRequest;
 import com.mochaeng.theia_api.processing.infrastructure.adapter.ollama.dto.OllamaResponse;
+import com.mochaeng.theia_api.processing.infrastructure.adapter.ollama.exception.OllamaInvalidResponse;
 import com.mochaeng.theia_api.shared.domain.TextNormalizer;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Map;
@@ -46,38 +49,55 @@ public class OllamaGenerateDocumentEmbedding
         var fieldEmbeddings = new ArrayList<FieldEmbedding>();
 
         for (Map.Entry<String, String> entry : fieldTexts.entrySet()) {
-            String field = entry.getKey();
-            String text = TextNormalizer.forEmbedding(
+            var field = entry.getKey();
+            var text = TextNormalizer.forEmbedding(
                 entry.getValue(),
                 props.getMaxTextLength()
             );
 
+            if (text.isEmpty()) {
+                continue;
+            }
+
             log.info("Embedding field: {}, text: {}", field, text);
+            var startingTime = Instant.now();
 
-            var response = makeOllamaCallWithRetry(text);
+            try {
+                var response = makeOllamaCallWithRetry(text);
 
-            var fieldEmbedding = FieldEmbedding.builder()
-                .fieldName(field)
-                .embedding(response.getFirstEmbedding())
-                .text(text)
-                .metadata(
-                    EmbeddingMetadata.builder()
-                        .model(
-                            response.model() != null
-                                ? response.model()
-                                : props.getModel()
-                        )
-                        .build()
-                )
-                .build();
+                var endTime = Instant.now();
+                var totalTime = Duration.between(
+                    startingTime,
+                    endTime
+                ).toMillis();
 
-            fieldEmbeddings.add(fieldEmbedding);
-            log.info(
-                "Embedded  field '{}' with dimensions '{}'",
-                field,
-                fieldEmbedding.dimensions()
-            );
-            log.info(Arrays.toString(fieldEmbedding.embedding()));
+                var fieldEmbedding = FieldEmbedding.builder()
+                    .fieldName(field)
+                    .embedding(response.getFirstEmbedding())
+                    .text(text)
+                    .metadata(
+                        EmbeddingMetadata.builder()
+                            .model(response.model())
+                            .tokenCount(response.promptEvalCount())
+                            .processingTimeMs(totalTime)
+                            .build()
+                    )
+                    .build();
+
+                fieldEmbeddings.add(fieldEmbedding);
+                log.info(
+                    "Embedded  field '{}' with dimensions '{}'",
+                    field,
+                    fieldEmbedding.dimensions()
+                );
+                log.info(Arrays.toString(fieldEmbedding.embedding()));
+            } catch (Exception e) {
+                log.warn(
+                    "Failed to generate embedding for field: {}",
+                    entry.getKey(),
+                    e
+                );
+            }
         }
 
         var documentEmbeddings = DocumentEmbedding.builder()
@@ -115,9 +135,9 @@ public class OllamaGenerateDocumentEmbedding
             .retrieve()
             .body(OllamaResponse.class);
 
-        //        if (response == null || !response.hasEmbeddings()) {
-        //            throw new OllamaInvalidResponse("Response contains no embeddings");
-        //        }
+        if (response == null || !response.hasEmbeddings()) {
+            throw new OllamaInvalidResponse("Response contains no embeddings");
+        }
 
         return response;
     }
