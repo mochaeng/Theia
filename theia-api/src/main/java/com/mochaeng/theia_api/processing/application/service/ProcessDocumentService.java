@@ -1,10 +1,11 @@
 package com.mochaeng.theia_api.processing.application.service;
 
-import com.mochaeng.theia_api.processing.application.dto.FieldEmbedding;
 import com.mochaeng.theia_api.processing.application.port.in.ProcessDocumentUseCase;
 import com.mochaeng.theia_api.processing.application.port.out.DownloadDocumentPort;
 import com.mochaeng.theia_api.processing.application.port.out.ExtractDocumentDataPort;
 import com.mochaeng.theia_api.processing.application.port.out.GenerateDocumentEmbeddingPort;
+import com.mochaeng.theia_api.processing.application.port.out.SaveDocumentPort;
+import com.mochaeng.theia_api.processing.domain.model.FieldEmbedding;
 import com.mochaeng.theia_api.shared.application.dto.DocumentUploadedMessage;
 import java.util.Arrays;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,7 @@ public class ProcessDocumentService implements ProcessDocumentUseCase {
     private final DownloadDocumentPort downloadDocument;
     private final ExtractDocumentDataPort extractDocumentData;
     private final GenerateDocumentEmbeddingPort generateDocumentEmbedding;
+    private final SaveDocumentPort saveDocument;
 
     @Override
     public void process(DocumentUploadedMessage message) {
@@ -59,5 +61,10 @@ public class ProcessDocumentService implements ProcessDocumentUseCase {
                 Arrays.toString(fieldEmbedding.embedding())
             );
         }
+
+        saveDocument.save(
+            documentDataResult.metadata(),
+            embeddingsResult.embedding()
+        );
     }
 }

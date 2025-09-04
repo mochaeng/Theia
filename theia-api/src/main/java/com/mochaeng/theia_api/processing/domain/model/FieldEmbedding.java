@@ -1,7 +1,5 @@
-package com.mochaeng.theia_api.processing.application.dto;
+package com.mochaeng.theia_api.processing.domain.model;
 
-import com.mochaeng.theia_api.processing.domain.model.DocumentField;
-import com.mochaeng.theia_api.processing.domain.model.EmbeddingMetadata;
 import lombok.Builder;
 
 @Builder

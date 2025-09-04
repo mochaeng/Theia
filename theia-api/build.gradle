@@ -38,15 +38,16 @@ ext {
     set('awsSdkVersion', "2.32.27")
 }
 
-
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
-	implementation 'org.springframework.ai:spring-ai-starter-vector-store-qdrant'
 	implementation 'org.springframework.kafka:spring-kafka'
     implementation 'software.amazon.awssdk:s3'
     implementation 'org.apache.pdfbox:pdfbox:3.0.5'
 	implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-xml'
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.flywaydb:flyway-core'
+	implementation 'org.flywaydb:flyway-database-postgresql'
 
 	compileOnly 'org.projectlombok:lombok'
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'

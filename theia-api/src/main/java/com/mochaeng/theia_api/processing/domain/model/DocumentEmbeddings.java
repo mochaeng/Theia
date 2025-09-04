@@ -1,4 +1,4 @@
-package com.mochaeng.theia_api.processing.application.dto;
+package com.mochaeng.theia_api.processing.domain.model;
 
 import java.util.List;
 import java.util.UUID;

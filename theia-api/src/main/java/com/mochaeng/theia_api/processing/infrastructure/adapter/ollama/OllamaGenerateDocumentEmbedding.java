@@ -1,13 +1,13 @@
 package com.mochaeng.theia_api.processing.infrastructure.adapter.ollama;
 
-import com.mochaeng.theia_api.processing.application.dto.DocumentEmbeddings;
-import com.mochaeng.theia_api.processing.application.dto.DocumentFieldBuilder;
 import com.mochaeng.theia_api.processing.application.dto.EmbeddingDocumentResult;
-import com.mochaeng.theia_api.processing.application.dto.FieldEmbedding;
 import com.mochaeng.theia_api.processing.application.port.out.GenerateDocumentEmbeddingPort;
+import com.mochaeng.theia_api.processing.application.service.DocumentFieldBuilder;
+import com.mochaeng.theia_api.processing.domain.model.DocumentEmbeddings;
 import com.mochaeng.theia_api.processing.domain.model.DocumentField;
 import com.mochaeng.theia_api.processing.domain.model.DocumentMetadata;
 import com.mochaeng.theia_api.processing.domain.model.EmbeddingMetadata;
+import com.mochaeng.theia_api.processing.domain.model.FieldEmbedding;
 import com.mochaeng.theia_api.processing.infrastructure.adapter.ollama.dto.OllamaRequest;
 import com.mochaeng.theia_api.processing.infrastructure.adapter.ollama.dto.OllamaResponse;
 import com.mochaeng.theia_api.processing.infrastructure.adapter.ollama.exception.OllamaException;
@@ -15,13 +15,10 @@ import com.mochaeng.theia_api.processing.infrastructure.adapter.ollama.exception
 import com.mochaeng.theia_api.processing.infrastructure.adapter.ollama.exception.OllamaTimeoutException;
 import com.mochaeng.theia_api.processing.infrastructure.adapter.ollama.exception.OllamaUnavailableException;
 import com.mochaeng.theia_api.shared.domain.TextNormalizer;
-import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;

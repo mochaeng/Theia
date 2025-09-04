@@ -1,5 +1,6 @@
 package com.mochaeng.theia_api.processing.application.dto;
 
+import com.mochaeng.theia_api.processing.domain.model.DocumentEmbeddings;
 import lombok.Builder;
 
 @Builder

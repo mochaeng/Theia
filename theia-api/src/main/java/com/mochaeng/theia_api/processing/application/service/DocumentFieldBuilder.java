@@ -1,4 +1,4 @@
-package com.mochaeng.theia_api.processing.application.dto;
+package com.mochaeng.theia_api.processing.application.service;
 
 import com.mochaeng.theia_api.processing.domain.model.DocumentField;
 import com.mochaeng.theia_api.processing.domain.model.DocumentMetadata;
