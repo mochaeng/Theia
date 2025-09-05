@@ -3,11 +3,11 @@ package com.mochaeng.theia_api.processing.infrastructure.adapter.jpa;
 import com.mochaeng.theia_api.processing.domain.model.ProcessedDocument;
 import jakarta.persistence.*;
 import java.time.Instant;
-import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -17,7 +17,7 @@ import org.hibernate.type.SqlTypes;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class DocumentJpaEntity {
+public class DocumentEntity {
 
     @Id
     private UUID id;
@@ -41,6 +41,14 @@ public class DocumentJpaEntity {
 
     @Column(name = "updated_at")
     private Instant updatedAt;
+
+    @ManyToMany
+    @JoinTable(
+        name = "document_author",
+        joinColumns = @JoinColumn(name = "document_id"),
+        inverseJoinColumns = @JoinColumn(name = "author_id")
+    )
+    private Set<AuthorEntity> authors = new HashSet<>();
 
     @PrePersist
     protected void onCreate() {
@@ -69,8 +77,8 @@ public class DocumentJpaEntity {
             .build();
     }
 
-    public static DocumentJpaEntity fromDomain(ProcessedDocument document) {
-        return DocumentJpaEntity.builder()
+    public static DocumentEntity fromDomain(ProcessedDocument document) {
+        return DocumentEntity.builder()
             .id(document.id())
             .title(document.title())
             .abstractText(document.abstractText())

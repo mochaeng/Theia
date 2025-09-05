@@ -13,9 +13,9 @@ import org.springframework.stereotype.Component;
 @Component("kafkaListenUploadedDocument")
 @RequiredArgsConstructor
 @Slf4j
-public class KafkaListenUploadedDocument {
+public class KafkaListenDocument {
 
-    private final ProcessDocumentUseCase processUploadedDocument;
+    private final ProcessDocumentUseCase processDocument;
 
     @KafkaListener(
         topics = "${kafka.topics.document-uploaded}",
@@ -35,6 +35,6 @@ public class KafkaListenUploadedDocument {
             topic
         );
 
-        processUploadedDocument.process(event);
+        processDocument.process(event);
     }
 }

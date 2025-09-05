@@ -2,7 +2,7 @@ package com.mochaeng.theia_api.processing.infrastructure.adapter.persistence;
 
 import com.mochaeng.theia_api.processing.domain.model.ProcessedDocument;
 import com.mochaeng.theia_api.processing.domain.repository.DocumentRepository;
-import com.mochaeng.theia_api.processing.infrastructure.adapter.jpa.DocumentJpaEntity;
+import com.mochaeng.theia_api.processing.infrastructure.adapter.jpa.DocumentEntity;
 import com.mochaeng.theia_api.processing.infrastructure.adapter.jpa.JpaDocumentRepository;
 import java.util.Optional;
 import java.util.UUID;
@@ -21,7 +21,7 @@ public class ImplDocumentRepository implements DocumentRepository {
     public ProcessedDocument save(ProcessedDocument document) {
         log.info("save document: {}", document.id());
 
-        var entity = DocumentJpaEntity.fromDomain(document);
+        var entity = DocumentEntity.fromDomain(document);
         var savedEntity = repository.save(entity);
 
         log.info("Successfully saved document with ID: {}", document.id());
@@ -32,7 +32,7 @@ public class ImplDocumentRepository implements DocumentRepository {
     public Optional<ProcessedDocument> findById(UUID id) {
         log.info("find document by id: {}", id);
 
-        return repository.findById(id).map(DocumentJpaEntity::toDomain);
+        return repository.findById(id).map(DocumentEntity::toDomain);
     }
 
     @Override
