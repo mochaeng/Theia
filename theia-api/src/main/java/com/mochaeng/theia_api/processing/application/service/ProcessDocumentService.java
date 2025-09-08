@@ -1,12 +1,12 @@
 package com.mochaeng.theia_api.processing.application.service;
 
 import com.mochaeng.theia_api.processing.application.port.in.ProcessDocumentUseCase;
+import com.mochaeng.theia_api.processing.application.port.out.DocumentPersistencePort;
 import com.mochaeng.theia_api.processing.application.port.out.DownloadDocumentPort;
 import com.mochaeng.theia_api.processing.application.port.out.ExtractDocumentDataPort;
-import com.mochaeng.theia_api.processing.application.port.out.GenerateDocumentEmbeddingPort;
+import com.mochaeng.theia_api.processing.application.port.out.GenerateDocumentEmbeddingsPort;
 import com.mochaeng.theia_api.processing.domain.model.FieldEmbedding;
 import com.mochaeng.theia_api.processing.domain.model.ProcessedDocument;
-import com.mochaeng.theia_api.processing.domain.repository.DocumentRepository;
 import com.mochaeng.theia_api.shared.application.dto.DocumentUploadedMessage;
 import java.util.Arrays;
 import lombok.RequiredArgsConstructor;
@@ -20,12 +20,12 @@ public class ProcessDocumentService implements ProcessDocumentUseCase {
 
     private final DownloadDocumentPort downloadDocument;
     private final ExtractDocumentDataPort extractDocumentData;
-    private final GenerateDocumentEmbeddingPort generateDocumentEmbedding;
-    private final DocumentRepository documentRepository;
+    private final GenerateDocumentEmbeddingsPort generateDocumentEmbeddings;
+    private final DocumentPersistencePort documentPersistence;
 
     @Override
     public void process(DocumentUploadedMessage message) {
-        log.info("Processing uploaded document message event");
+        log.info("processing uploaded document message event: {}", message);
 
         var downloadResult = downloadDocument.download(message);
         if (!downloadResult.isSuccess()) {
@@ -33,19 +33,19 @@ public class ProcessDocumentService implements ProcessDocumentUseCase {
             return;
         }
 
-        var documentDataResult = extractDocumentData.extract(
+        var metadataResult = extractDocumentData.extract(
             message,
             downloadResult.content()
         );
-        if (!documentDataResult.isSuccess()) {
+        if (!metadataResult.isSuccess()) {
             // publish failed extract event to kafka
             return;
         }
 
-        log.info("Metadata: {}", documentDataResult.metadata());
+        log.info("Metadata: {}", metadataResult.metadata());
 
-        var embeddingsResult = generateDocumentEmbedding.generate(
-            documentDataResult.metadata()
+        var embeddingsResult = generateDocumentEmbeddings.generate(
+            metadataResult.metadata()
         );
         if (!embeddingsResult.isSuccess()) {
             // publish failed embeddings event to kafka
@@ -64,10 +64,13 @@ public class ProcessDocumentService implements ProcessDocumentUseCase {
         }
 
         var processedDocument = ProcessedDocument.from(
-            documentDataResult.metadata(),
+            metadataResult.metadata(),
+            downloadResult.hash(),
             embeddingsResult.embedding()
         );
 
-        documentRepository.save(processedDocument);
+        log.info("document to be processed: {}", processedDocument);
+
+        //        documentPersistence.save(processedDocument);
     }
 }

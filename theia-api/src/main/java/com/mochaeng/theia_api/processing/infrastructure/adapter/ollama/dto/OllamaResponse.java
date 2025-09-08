@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 public record OllamaResponse(
     String model,
-    Float[][] embeddings,
+    float[][] embeddings,
 
     @JsonProperty("total_duration") long totalDuration,
 
@@ -24,7 +24,7 @@ public record OllamaResponse(
         );
     }
 
-    public Float[] getFirstEmbedding() {
+    public float[] getFirstEmbedding() {
         return hasEmbeddings() ? embeddings[0] : null;
     }
 
@@ -33,7 +33,7 @@ public record OllamaResponse(
     }
 
     @Override
-    public Float[][] embeddings() {
+    public float[][] embeddings() {
         return embeddings == null ? null : embeddings.clone();
     }
 }

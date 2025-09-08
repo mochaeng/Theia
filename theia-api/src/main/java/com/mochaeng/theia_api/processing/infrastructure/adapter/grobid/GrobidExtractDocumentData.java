@@ -3,6 +3,7 @@ package com.mochaeng.theia_api.processing.infrastructure.adapter.grobid;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.mochaeng.theia_api.processing.application.dto.ExtractDocumentResult;
 import com.mochaeng.theia_api.processing.application.port.out.ExtractDocumentDataPort;
+import com.mochaeng.theia_api.processing.domain.model.Author;
 import com.mochaeng.theia_api.processing.domain.model.DocumentMetadata;
 import com.mochaeng.theia_api.processing.infrastructure.adapter.grobid.exception.GrobidException;
 import com.mochaeng.theia_api.processing.infrastructure.adapter.grobid.exception.GrobidParsingException;
@@ -10,6 +11,8 @@ import com.mochaeng.theia_api.processing.infrastructure.adapter.grobid.exception
 import com.mochaeng.theia_api.processing.infrastructure.adapter.grobid.exception.GrobidUnavailableException;
 import com.mochaeng.theia_api.shared.application.dto.DocumentUploadedMessage;
 import java.net.SocketTimeoutException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -215,7 +218,7 @@ public class GrobidExtractDocumentData implements ExtractDocumentDataPort {
         return DocumentMetadata.builder()
             .documentId(documentId)
             .title(title)
-            .author(null)
+            .authors(new ArrayList<>())
             .abstractText(null)
             .additionalMetadata(Map.of("processEngine", "GROBID"))
             .build();

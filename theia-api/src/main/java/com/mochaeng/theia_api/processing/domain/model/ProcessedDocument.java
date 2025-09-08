@@ -1,6 +1,7 @@
 package com.mochaeng.theia_api.processing.domain.model;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 import lombok.Builder;
 import lombok.With;
@@ -9,44 +10,28 @@ import lombok.With;
 @With
 public record ProcessedDocument(
     UUID id,
-    String title,
-    String abstractText,
-    Float[] titleEmbedding,
-    Float[] abstractEmbedding,
+    byte[] fileHash,
+    List<FieldEmbedding> fieldEmbeddings,
+    List<Author> authors,
     Instant createdAt,
     Instant updatedAt
 ) {
     public static ProcessedDocument from(
         DocumentMetadata metadata,
+        byte[] fileHash,
         DocumentEmbeddings embeddings
     ) {
-        Float[] titleEmbedding = null;
-        Float[] abstractEmbedding = null;
-
-        for (FieldEmbedding fieldEmbedding : embeddings.fieldEmbeddings()) {
-            if (fieldEmbedding.fieldName() == DocumentField.TITLE) {
-                titleEmbedding = fieldEmbedding.embedding();
-            } else if (fieldEmbedding.fieldName() == DocumentField.ABSTRACT) {
-                abstractEmbedding = fieldEmbedding.embedding();
-            }
-        }
-
         return ProcessedDocument.builder()
             .id(metadata.documentId())
-            .title(metadata.title())
-            .abstractText(metadata.abstractText())
-            .titleEmbedding(titleEmbedding)
-            .abstractEmbedding(abstractEmbedding)
+            .fileHash(fileHash)
+            .fieldEmbeddings(embeddings.fieldEmbeddings())
+            .authors(metadata.authors())
             .createdAt(Instant.now())
             .updatedAt(Instant.now())
             .build();
     }
 
-    public boolean hasTitleEmbedding() {
-        return titleEmbedding != null && titleEmbedding.length > 0;
-    }
-
-    public boolean hasAbstractEmbedding() {
-        return abstractEmbedding != null && abstractEmbedding.length > 0;
+    public boolean hasEmbeddings() {
+        return fieldEmbeddings != null && !fieldEmbeddings.isEmpty();
     }
 }

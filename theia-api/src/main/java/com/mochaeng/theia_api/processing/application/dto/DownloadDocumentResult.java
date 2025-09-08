@@ -6,6 +6,7 @@ import lombok.Builder;
 @Builder
 public record DownloadDocumentResult(
     byte[] content,
+    byte[] hash,
     ErrorCode errorCode,
     String errorMessage
 ) {
@@ -31,8 +32,11 @@ public record DownloadDocumentResult(
         return Arrays.copyOf(content, content.length);
     }
 
-    public static DownloadDocumentResult success(byte[] content) {
-        return DownloadDocumentResult.builder().content(content).build();
+    public static DownloadDocumentResult success(byte[] content, byte[] hash) {
+        return DownloadDocumentResult.builder()
+            .content(content)
+            .hash(hash)
+            .build();
     }
 
     public static DownloadDocumentResult failure(

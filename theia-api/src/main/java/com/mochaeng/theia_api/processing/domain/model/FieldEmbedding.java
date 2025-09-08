@@ -5,7 +5,7 @@ import lombok.Builder;
 @Builder
 public record FieldEmbedding(
     DocumentField fieldName,
-    Float[] embedding,
+    float[] embedding,
     String text,
     EmbeddingMetadata metadata
 ) {
@@ -22,7 +22,7 @@ public record FieldEmbedding(
     }
 
     @Override
-    public Float[] embedding() {
+    public float[] embedding() {
         return embedding == null ? null : embedding.clone();
     }
 }

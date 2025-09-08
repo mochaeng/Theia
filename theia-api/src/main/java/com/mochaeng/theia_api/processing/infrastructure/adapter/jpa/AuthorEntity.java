@@ -1,13 +1,14 @@
 package com.mochaeng.theia_api.processing.infrastructure.adapter.jpa;
 
 import jakarta.persistence.*;
+import java.time.Instant;
+import java.util.HashSet;
+import java.util.Objects;
+import java.util.Set;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.NoArgsConstructor;
-
-import java.time.Instant;
-import java.util.HashSet;
-import java.util.Set;
+import org.hibernate.proxy.HibernateProxy;
 
 @Entity
 @Table(name = "author")
@@ -26,7 +27,7 @@ public class AuthorEntity {
     @Column(name = "last_name")
     private String lastName;
 
-    @Column(name = "email", unique = true)
+    @Column(name = "email")
     private String email;
 
     @Column(name = "created_at")
@@ -36,6 +37,7 @@ public class AuthorEntity {
     private Instant updatedAt;
 
     @ManyToMany(mappedBy = "authors")
+    @Builder.Default
     private Set<DocumentEntity> documents = new HashSet<>();
 
     @PrePersist
@@ -55,5 +57,29 @@ public class AuthorEntity {
             return firstName;
         }
         return firstName + " " + lastName;
+    }
+
+    @Override
+    public final boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null) return false;
+        Class<?> oEffectiveClass = o instanceof HibernateProxy
+            ? ((HibernateProxy) o).getHibernateLazyInitializer().getPersistentClass()
+            : o.getClass();
+        Class<?> thisEffectiveClass = this instanceof HibernateProxy
+            ? ((HibernateProxy) this).getHibernateLazyInitializer().getPersistentClass()
+            : this.getClass();
+        if (thisEffectiveClass != oEffectiveClass) return false;
+        AuthorEntity that = (AuthorEntity) o;
+        return id != null && Objects.equals(id, that.id);
+    }
+
+    @Override
+    public final int hashCode() {
+        return this instanceof HibernateProxy
+            ? ((HibernateProxy) this).getHibernateLazyInitializer()
+                .getPersistentClass()
+                .hashCode()
+            : getClass().hashCode();
     }
 }

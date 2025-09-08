@@ -1,7 +1,7 @@
 package com.mochaeng.theia_api.processing.infrastructure.adapter.ollama;
 
 import com.mochaeng.theia_api.processing.application.dto.EmbeddingDocumentResult;
-import com.mochaeng.theia_api.processing.application.port.out.GenerateDocumentEmbeddingPort;
+import com.mochaeng.theia_api.processing.application.port.out.GenerateDocumentEmbeddingsPort;
 import com.mochaeng.theia_api.processing.application.service.DocumentFieldBuilder;
 import com.mochaeng.theia_api.processing.domain.model.DocumentEmbeddings;
 import com.mochaeng.theia_api.processing.domain.model.DocumentField;
@@ -32,7 +32,7 @@ import org.springframework.web.client.RestClient;
 @RequiredArgsConstructor
 @Slf4j
 public class OllamaGenerateDocumentEmbedding
-    implements GenerateDocumentEmbeddingPort {
+    implements GenerateDocumentEmbeddingsPort {
 
     @Qualifier("ollamaRestClient")
     private final RestClient restClient;

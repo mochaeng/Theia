@@ -3,18 +3,15 @@ package com.mochaeng.theia_api.processing.infrastructure.adapter.jpa;
 import com.mochaeng.theia_api.processing.domain.model.ProcessedDocument;
 import jakarta.persistence.*;
 import java.time.Instant;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.UUID;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.NoArgsConstructor;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
+import java.util.*;
+import lombok.*;
+import org.hibernate.proxy.HibernateProxy;
 
+@Builder
+@Getter
+@Setter
 @Entity
 @Table(name = "document")
-@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class DocumentEntity {
@@ -22,19 +19,11 @@ public class DocumentEntity {
     @Id
     private UUID id;
 
-    @Column(name = "title")
-    private String title;
+    @Column(name = "file_path")
+    private String filePath;
 
-    @Column(name = "abstract")
-    private String abstractText;
-
-    @Column(name = "title_embedding", columnDefinition = "vector(768)")
-    @JdbcTypeCode(SqlTypes.ARRAY)
-    private Float[] titleEmbedding;
-
-    @Column(name = "abstract_embedding", columnDefinition = "vector(768)")
-    @JdbcTypeCode(SqlTypes.ARRAY)
-    private Float[] abstractEmbedding;
+    @Column(name = "file_hash")
+    private byte[] fileHash;
 
     @Column(name = "created_at")
     private Instant createdAt;
@@ -42,13 +31,18 @@ public class DocumentEntity {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
+    @OneToMany(mappedBy = "document", orphanRemoval = true)
+    @Builder.Default
+    private Set<FieldEntity> fields = new LinkedHashSet<>();
+
     @ManyToMany
+    @Builder.Default
     @JoinTable(
         name = "document_author",
         joinColumns = @JoinColumn(name = "document_id"),
         inverseJoinColumns = @JoinColumn(name = "author_id")
     )
-    private Set<AuthorEntity> authors = new HashSet<>();
+    private Set<AuthorEntity> authors = new LinkedHashSet<>();
 
     @PrePersist
     protected void onCreate() {
@@ -61,39 +55,44 @@ public class DocumentEntity {
         updatedAt = Instant.now();
     }
 
-    public ProcessedDocument toDomain() {
-        return ProcessedDocument.builder()
-            .id(id)
-            .title(title)
-            .abstractText(abstractText)
-            .titleEmbedding(
-                titleEmbedding != null ? titleEmbedding.clone() : null
-            )
-            .abstractEmbedding(
-                abstractEmbedding != null ? abstractEmbedding.clone() : null
-            )
-            .createdAt(createdAt)
-            .updatedAt(updatedAt)
-            .build();
-    }
+    //    public ProcessedDocument toDomain() {
+    //        return ProcessedDocument.builder()
+    //            .id(id)
+    //            .createdAt(createdAt)
+    //            .updatedAt(updatedAt)
+    //            .build();
+    //    }
 
     public static DocumentEntity fromDomain(ProcessedDocument document) {
         return DocumentEntity.builder()
             .id(document.id())
-            .title(document.title())
-            .abstractText(document.abstractText())
-            .titleEmbedding(
-                document.titleEmbedding() != null
-                    ? document.titleEmbedding().clone()
-                    : null
-            )
-            .abstractEmbedding(
-                document.abstractEmbedding() != null
-                    ? document.abstractEmbedding().clone()
-                    : null
-            )
+            .fileHash(document.fileHash())
             .createdAt(document.createdAt())
             .updatedAt(document.updatedAt())
             .build();
+    }
+
+    @Override
+    public final boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null) return false;
+        Class<?> oEffectiveClass = o instanceof HibernateProxy
+            ? ((HibernateProxy) o).getHibernateLazyInitializer().getPersistentClass()
+            : o.getClass();
+        Class<?> thisEffectiveClass = this instanceof HibernateProxy
+            ? ((HibernateProxy) this).getHibernateLazyInitializer().getPersistentClass()
+            : this.getClass();
+        if (thisEffectiveClass != oEffectiveClass) return false;
+        DocumentEntity that = (DocumentEntity) o;
+        return getId() != null && Objects.equals(getId(), that.getId());
+    }
+
+    @Override
+    public final int hashCode() {
+        return this instanceof HibernateProxy
+            ? ((HibernateProxy) this).getHibernateLazyInitializer()
+                .getPersistentClass()
+                .hashCode()
+            : getClass().hashCode();
     }
 }
