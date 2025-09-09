@@ -4,6 +4,7 @@ import com.mochaeng.theia_api.processing.application.dto.DownloadDocumentResult;
 import com.mochaeng.theia_api.processing.application.port.out.DownloadDocumentPort;
 import com.mochaeng.theia_api.shared.application.dto.DocumentUploadedMessage;
 import com.mochaeng.theia_api.shared.config.s3.S3Properties;
+import java.security.MessageDigest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.Message;
@@ -13,8 +14,6 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.S3Exception;
-
-import java.security.MessageDigest;
 
 @Component("s3DownloadUploadedDocument")
 @RequiredArgsConstructor
@@ -51,8 +50,7 @@ public class S3DownloadUploadedDocument implements DownloadDocumentPort {
             if (documentBytes.length != message.fileSizeBytes()) {
                 return DownloadDocumentResult.failure(
                     DownloadDocumentResult.ErrorCode.INVALID_FILE_SIZE,
-                    "Document doesn't match stored file size: have [%d] but stored [%d]"
-                        .formatted(
+                    "Document doesn't match stored file size: have [%d] but stored [%d]".formatted(
                         documentBytes.length,
                         message.fileSizeBytes()
                     )

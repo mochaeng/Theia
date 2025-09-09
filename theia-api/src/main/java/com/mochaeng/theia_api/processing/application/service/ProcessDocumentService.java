@@ -53,24 +53,25 @@ public class ProcessDocumentService implements ProcessDocumentUseCase {
         }
 
         log.info("Embeddings generated successfully");
-        for (FieldEmbedding fieldEmbedding : embeddingsResult
-            .embedding()
-            .fieldEmbeddings()) {
-            log.info(
-                "Field: {}, Embedding: {}",
-                fieldEmbedding.fieldName(),
-                Arrays.toString(fieldEmbedding.embedding())
-            );
-        }
+        //        for (FieldEmbedding fieldEmbedding : embeddingsResult
+        //            .embedding()
+        //            .fieldEmbeddings()) {
+        //            log.info(
+        //                "Field: {}, Embedding: {}",
+        //                fieldEmbedding.fieldName(),
+        //                Arrays.toString(fieldEmbedding.embedding())
+        //            );
+        //        }
 
         var processedDocument = ProcessedDocument.from(
             metadataResult.metadata(),
             downloadResult.hash(),
+            message.bucketPath(),
             embeddingsResult.embedding()
         );
 
         log.info("document to be processed: {}", processedDocument);
 
-        //        documentPersistence.save(processedDocument);
+        documentPersistence.save(processedDocument);
     }
 }

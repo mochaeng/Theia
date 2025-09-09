@@ -31,7 +31,11 @@ public class DocumentEntity {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
-    @OneToMany(mappedBy = "document", orphanRemoval = true)
+    @OneToMany(
+        mappedBy = "document",
+        orphanRemoval = true,
+        cascade = CascadeType.ALL
+    )
     @Builder.Default
     private Set<FieldEntity> fields = new LinkedHashSet<>();
 
@@ -66,6 +70,7 @@ public class DocumentEntity {
     public static DocumentEntity fromDomain(ProcessedDocument document) {
         return DocumentEntity.builder()
             .id(document.id())
+            .filePath(document.filePath())
             .fileHash(document.fileHash())
             .createdAt(document.createdAt())
             .updatedAt(document.updatedAt())

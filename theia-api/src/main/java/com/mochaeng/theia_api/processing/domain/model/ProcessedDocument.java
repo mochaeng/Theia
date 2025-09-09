@@ -11,6 +11,7 @@ import lombok.With;
 public record ProcessedDocument(
     UUID id,
     byte[] fileHash,
+    String filePath,
     List<FieldEmbedding> fieldEmbeddings,
     List<Author> authors,
     Instant createdAt,
@@ -19,11 +20,13 @@ public record ProcessedDocument(
     public static ProcessedDocument from(
         DocumentMetadata metadata,
         byte[] fileHash,
+        String filePath,
         DocumentEmbeddings embeddings
     ) {
         return ProcessedDocument.builder()
             .id(metadata.documentId())
             .fileHash(fileHash)
+            .filePath(filePath)
             .fieldEmbeddings(embeddings.fieldEmbeddings())
             .authors(metadata.authors())
             .createdAt(Instant.now())

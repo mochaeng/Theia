@@ -35,6 +35,10 @@ public class KafkaListenDocument {
             topic
         );
 
-        processDocument.process(event);
+        try {
+            processDocument.process(event);
+        } catch (Exception e) {
+            log.error("Error processing document: {}", e.getMessage());
+        }
     }
 }

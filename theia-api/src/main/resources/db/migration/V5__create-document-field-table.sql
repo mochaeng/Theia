@@ -3,7 +3,7 @@ CREATE TABLE document_field (
     document_id UUID REFERENCES document(id) ON DELETE CASCADE,
     field_type VARCHAR(50) NOT NULL,
     field_text TEXT NOT NULL,
-    embedding VECTOR(764) NOT NULL,
+    embedding VECTOR(768) NOT NULL,
     token_count INT,
     model VARCHAR(100),
     processing_time_ms BIGINT,
