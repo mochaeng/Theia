@@ -5,10 +5,8 @@ import com.mochaeng.theia_api.processing.application.port.out.DocumentPersistenc
 import com.mochaeng.theia_api.processing.application.port.out.DownloadDocumentPort;
 import com.mochaeng.theia_api.processing.application.port.out.ExtractDocumentDataPort;
 import com.mochaeng.theia_api.processing.application.port.out.GenerateDocumentEmbeddingsPort;
-import com.mochaeng.theia_api.processing.domain.model.FieldEmbedding;
 import com.mochaeng.theia_api.processing.domain.model.ProcessedDocument;
 import com.mochaeng.theia_api.shared.application.dto.DocumentUploadedMessage;
-import java.util.Arrays;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -34,15 +32,18 @@ public class ProcessDocumentService implements ProcessDocumentUseCase {
         }
 
         var metadataResult = extractDocumentData.extract(
-            message,
+            message.documentID(),
             downloadResult.content()
         );
         if (!metadataResult.isSuccess()) {
             // publish failed extract event to kafka
             return;
         }
-
-        log.info("Metadata: {}", metadataResult.metadata());
+        log.info(
+            "metadata extracted for document with id [{}]: {}",
+            message.documentID(),
+            metadataResult.metadata()
+        );
 
         var embeddingsResult = generateDocumentEmbeddings.generate(
             metadataResult.metadata()
@@ -51,17 +52,7 @@ public class ProcessDocumentService implements ProcessDocumentUseCase {
             // publish failed embeddings event to kafka
             return;
         }
-
         log.info("Embeddings generated successfully");
-        //        for (FieldEmbedding fieldEmbedding : embeddingsResult
-        //            .embedding()
-        //            .fieldEmbeddings()) {
-        //            log.info(
-        //                "Field: {}, Embedding: {}",
-        //                fieldEmbedding.fieldName(),
-        //                Arrays.toString(fieldEmbedding.embedding())
-        //            );
-        //        }
 
         var processedDocument = ProcessedDocument.from(
             metadataResult.metadata(),
@@ -69,9 +60,15 @@ public class ProcessDocumentService implements ProcessDocumentUseCase {
             message.bucketPath(),
             embeddingsResult.embedding()
         );
-
-        log.info("document to be processed: {}", processedDocument);
-
-        documentPersistence.save(processedDocument);
+        log.info("document to be saved: {}", processedDocument);
+        var persistenceResult = documentPersistence.save(processedDocument);
+        if (!persistenceResult.isSuccess()) {
+            // publish failed persistence event to kafka
+            return;
+        }
+        log.info(
+            "document with id [{}] was persisted successfully",
+            processedDocument.id()
+        );
     }
 }

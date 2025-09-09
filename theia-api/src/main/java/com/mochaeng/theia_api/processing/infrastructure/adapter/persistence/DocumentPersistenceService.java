@@ -54,6 +54,10 @@ public class DocumentPersistenceService {
         }
     }
 
+    public boolean existsByHash(byte[] hash) {
+        return documentRepository.existsByFileHash(hash);
+    }
+
     private DocumentEntity findOrCreateDocumentEntity(
         ProcessedDocument document
     ) {

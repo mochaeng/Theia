@@ -3,16 +3,13 @@ package com.mochaeng.theia_api.processing.infrastructure.adapter.grobid;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.mochaeng.theia_api.processing.application.dto.ExtractDocumentResult;
 import com.mochaeng.theia_api.processing.application.port.out.ExtractDocumentDataPort;
-import com.mochaeng.theia_api.processing.domain.model.Author;
 import com.mochaeng.theia_api.processing.domain.model.DocumentMetadata;
 import com.mochaeng.theia_api.processing.infrastructure.adapter.grobid.exception.GrobidException;
 import com.mochaeng.theia_api.processing.infrastructure.adapter.grobid.exception.GrobidParsingException;
 import com.mochaeng.theia_api.processing.infrastructure.adapter.grobid.exception.GrobidTimeoutException;
 import com.mochaeng.theia_api.processing.infrastructure.adapter.grobid.exception.GrobidUnavailableException;
-import com.mochaeng.theia_api.shared.application.dto.DocumentUploadedMessage;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -44,47 +41,55 @@ public class GrobidExtractDocumentData implements ExtractDocumentDataPort {
 
     @Override
     public ExtractDocumentResult extract(
-        DocumentUploadedMessage message,
+        UUID documentID,
         byte[] documentBytes
     ) {
         log.info(
-            "Starting Grobid extraction for document: {}",
-            message.documentID()
+            "starting Grobid extraction for document with id [{}]",
+            documentID
         );
 
         try {
-            String teiXml = callGrobidWithRetry(message, documentBytes);
+            var teiXml = callGrobidWithRetry(documentID, documentBytes);
             var grobidData = parseTeiResponse(teiXml);
-            var metadata = createMetadata(message.documentID(), grobidData);
+            var metadata = createMetadata(documentID, grobidData);
 
             log.info(
-                "Successfully extracted metadata for document: {}",
-                message.documentID()
+                "successfully extracted metadata for document with id [{}]",
+                documentID
             );
             return ExtractDocumentResult.success(metadata);
         } catch (GrobidUnavailableException e) {
-            log.error("Grobid is unavailable", e);
+            log.error("grobid is unavailable: {}", e.getMessage());
             return ExtractDocumentResult.failure(
                 e.getErrorCode(),
                 "Service unreachable"
             );
         } catch (GrobidTimeoutException e) {
-            log.error("Timeout calling Grobid for document {}", e.getMessage());
+            log.error(
+                "timeout calling grobid for document with id [{}]: {}",
+                documentID,
+                e.getMessage()
+            );
             return ExtractDocumentResult.failure(
                 e.getErrorCode(),
                 "Request to Grobid timed out"
             );
         } catch (GrobidParsingException e) {
-            log.error("Grobid parsing failure", e);
+            log.error(
+                "grobid parsing fail for document with id [{}]: {}",
+                documentID,
+                e.getMessage()
+            );
             return ExtractDocumentResult.failure(
                 e.getErrorCode(),
                 "Grobid parsing failure"
             );
         } catch (GrobidException e) {
             log.error(
-                "Grobid extraction failed for document: {}",
-                message.documentID(),
-                e
+                "grobid extraction failed for document with id [{}]: {}",
+                documentID,
+                e.getMessage()
             );
             return ExtractDocumentResult.failure(
                 e.getErrorCode(),
@@ -92,9 +97,9 @@ public class GrobidExtractDocumentData implements ExtractDocumentDataPort {
             );
         } catch (Exception e) {
             log.error(
-                "Unexpected error extraction for document: {}",
-                message.documentID(),
-                e
+                "unexpected error extraction for document with id [{}]: {}",
+                documentID,
+                e.getMessage()
             );
             return ExtractDocumentResult.failure(
                 "UNEXPECTED_ERROR",
@@ -103,25 +108,22 @@ public class GrobidExtractDocumentData implements ExtractDocumentDataPort {
         }
     }
 
-    private String callGrobidWithRetry(
-        DocumentUploadedMessage message,
-        byte[] documentBytes
-    ) {
+    private String callGrobidWithRetry(UUID documentID, byte[] documentBytes) {
         return retryTemplate.execute(context -> {
             if (context.getRetryCount() > 0) {
                 log.info(
-                    "Retrying Grobid call for document: {} (attempt {})",
-                    message.documentID(),
+                    "retrying Grobid call for document with id [{}] (attempt {})",
+                    documentID,
                     context.getRetryCount() + 1
                 );
             }
 
             try {
-                return makeGrobidCall(message, documentBytes);
+                return makeGrobidCall(documentID, documentBytes);
             } catch (ResourceAccessException e) {
                 log.warn(
-                    "Network error calling Grobid for document {}, attempt {}: {}",
-                    message.documentID(),
+                    "network error calling grobid for document with id [{}] (attempt {}): {}",
+                    documentID,
                     context.getRetryCount(),
                     e.getMessage()
                 );
@@ -130,13 +132,10 @@ public class GrobidExtractDocumentData implements ExtractDocumentDataPort {
         });
     }
 
-    private String makeGrobidCall(
-        DocumentUploadedMessage message,
-        byte[] documentBytes
-    ) {
+    private String makeGrobidCall(UUID documentID, byte[] documentBytes) {
         log.debug(
-            "Making HTTP call to Grobid for document: {}",
-            message.documentID()
+            "making http call to grobid for document with id [{}]",
+            documentID
         );
 
         MultipartBodyBuilder builder = new MultipartBodyBuilder();
@@ -159,14 +158,7 @@ public class GrobidExtractDocumentData implements ExtractDocumentDataPort {
                 .retrieve()
                 .body(String.class);
         } catch (ResourceAccessException e) {
-            log.debug(
-                "ResourceAccessException for Grobid details - message: {}, cause: {}, cause type: {}",
-                e.getMessage(),
-                e.getCause(),
-                e.getCause() != null
-                    ? e.getCause().getClass().getName()
-                    : "null"
-            );
+            log.debug("resourceAccessException for grobid: {}", e.getMessage());
 
             Throwable cause = e.getCause();
 
@@ -193,11 +185,14 @@ public class GrobidExtractDocumentData implements ExtractDocumentDataPort {
 
     private GrobidData parseTeiResponse(String teiXml) {
         try {
-            log.debug("Parsing TEI XML response: {}", teiXml);
+            log.debug("parsing tei xml response: {}", teiXml);
 
             return xmlMapper.readValue(teiXml, GrobidData.class);
         } catch (Exception e) {
-            log.error("Failed to parse Grobid TEI XML response", e);
+            log.error(
+                "failed to parse grobid tei xml response: {}",
+                e.getMessage()
+            );
             throw new GrobidParsingException(
                 "Failed to parse Grobid TEI XML response",
                 e

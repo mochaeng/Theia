@@ -20,51 +20,20 @@ public class GlobalExceptionHandler {
         DocumentValidationException ex,
         WebRequest request
     ) {
-        log.warn(
-            "Validation error: {} - {}",
+        log.error(
+            "validation error: {} - {}",
             ex.getErrorCode(),
             ex.getMessage()
         );
 
         ErrorResponse errorResponse = new ErrorResponse(
             ex.getErrorCodeValue(),
-            ex.getMessage(),
+            "Failed to validate your document. Try again later",
             extractPath(request)
         );
 
         return ResponseEntity.badRequest().body(errorResponse);
     }
-
-    //    public ResponseEntity<ErrorResponse> handleDownloadDocumentException(
-    //        DownloadDocumentException ex,
-    //        WebRequest request
-    //    ) {
-    //        log.warn("Downloading document file failed: {}", ex.getMessage());
-    //
-    //    }
-
-    //    @ExceptionHandler(DocumentProcessingException.class)
-    //    public ResponseEntity<ErrorResponse> handleDocumentProcessingException(
-    //        DocumentProcessingException ex,
-    //        WebRequest request
-    //    ) {
-    //        log.error(
-    //            "Document processing error: {} - {}",
-    //            ex.getErrorCode(),
-    //            ex.getMessage(),
-    //            ex
-    //        );
-    //
-    //        ErrorResponse errorResponse = new ErrorResponse(
-    //            ex.getErrorCode(),
-    //            ex.getMessage(),
-    //            extractPath(request)
-    //        );
-    //
-    //        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
-    //            errorResponse
-    //        );
-    //    }
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<ErrorResponse> handleMaxUploadSizeExceeded(

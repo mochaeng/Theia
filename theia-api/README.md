@@ -1,14 +1,3 @@
-# Theia API
-
-<div align="center">
-  <img src="../docs/dementer.png" alt="Caliburn logo."/>
-  <br />
-  <br/>
-  <a href="https://www.flaticon.com/free-icons/phoenix" title="phoenix icon" target="_blank">art from Flaticon</a>
-<a href="https://www.flaticon.com/free-icons/demeter" title="demeter icons">Demeter icons created by max.icons - Flaticon</a>
-</div>
-
-
 ## Grobid
 
 To use the **lightweight** model (CRF)
