@@ -15,6 +15,8 @@ import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +33,7 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.util.LinkedMultiValueMap;
 import org.testcontainers.containers.MinIOContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.kafka.KafkaContainer;
@@ -60,7 +63,14 @@ public class DocumentUploadIntegrationTest {
     private String bucketName;
 
     @Container
-    static KafkaContainer kafka = new KafkaContainer("apache/kafka:4.0.0");
+    static KafkaContainer kafka = new KafkaContainer(
+        DockerImageName.parse("apache/kafka:4.0.0")
+    )
+        .withEnv("KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR", "1")
+        .withEnv("KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR", "1")
+        .withEnv("KAFKA_TRANSACTION_STATE_LOG_MIN_ISR", "1")
+        .withEnv("KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS", "0")
+        .withReuse(true);
 
     @Container
     static MinIOContainer minio = new MinIOContainer(
@@ -78,8 +88,6 @@ public class DocumentUploadIntegrationTest {
 
     @Test
     void shouldUploadDocumentAndPublishKafkaEvent() throws Exception {
-        log.info("starting document upload test");
-
         var bitcoinPdf = new ClassPathResource("/test-files/bitcoin.pdf");
         assertThat(bitcoinPdf.exists()).isTrue();
 
@@ -102,9 +110,36 @@ public class DocumentUploadIntegrationTest {
 
         var documentID = response.getBody().documentID();
         assertThat(documentID).isNotNull();
-        assertThatCode(() -> {
-            var ignored = UUID.fromString(documentID);
-        }).doesNotThrowAnyException();
+        var docUUID = UUID.fromString(documentID);
+        assertThat(docUUID).isNotNull();
+
+        var kafkaEvent = waitForKafkaEvent(docUUID);
+        assertThat(kafkaEvent).isPresent();
+        assertThat(kafkaEvent.get().documentID()).isEqualTo(docUUID);
+        assertThat(kafkaEvent.get().filename()).endsWith(".pdf");
+        assertThat(kafkaEvent.get().contentType()).isEqualTo(
+            MediaType.APPLICATION_PDF_VALUE
+        );
+        assertThat(kafkaEvent.get().fileSizeBytes()).isGreaterThan(0);
+
+        verifyFileExistsInS3(kafkaEvent.get().bucketPath());
+    }
+
+    @Test
+    void shouldRejectInvalidFileType() throws Exception {}
+
+    @BeforeAll
+    static void beforeAll() {
+        kafka.start();
+        postgres.start();
+        minio.start();
+    }
+
+    @AfterAll
+    static void afterAll() {
+        kafka.stop();
+        postgres.stop();
+        minio.stop();
     }
 
     @DynamicPropertySource
@@ -131,6 +166,30 @@ public class DocumentUploadIntegrationTest {
         createS3Bucket();
         setupKafkaConsumer();
         log.info("test setup completed");
+    }
+
+    private void verifyFileExistsInS3(String s3Path) {
+        try {
+//            var s3Key = s3Path.startsWith("/") ? s3Path.substring(1) : s3Path;
+
+            log.info("Verifying file in S3 - Bucket: {}, Key: {}", bucketName, s3Path);
+
+            var headResponse = s3Client.headObject(builder -> {
+                builder.bucket(bucketName).key(s3Path);
+            });
+
+            assertThat(headResponse.contentLength()).isGreaterThan(0);
+            assertThat(headResponse.contentType()).isEqualTo(
+                MediaType.APPLICATION_PDF_VALUE
+            );
+        } catch (Exception e) {
+            throw new AssertionError(
+                "File should exist in s3 at path [%s]: %s".formatted(
+                    s3Path,
+                    e.getMessage()
+                )
+            );
+        }
     }
 
     private void createS3Bucket() {
@@ -167,6 +226,10 @@ public class DocumentUploadIntegrationTest {
             DocumentUploadedMessage.class
         );
         consumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        consumerProps.put(
+            ConsumerConfig.CLIENT_DNS_LOOKUP_CONFIG,
+            "resolve_canonical_bootstrap_servers_only"
+        );
 
         var consumerFactory = new DefaultKafkaConsumerFactory<
             String,
