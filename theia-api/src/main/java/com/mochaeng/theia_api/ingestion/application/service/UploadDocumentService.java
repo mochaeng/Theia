@@ -33,7 +33,6 @@ public class UploadDocumentService implements UploadDocumentUseCase {
             document.contentType(),
             Objects.requireNonNull(document.content()).length
         );
-
         publishUploadedDocumentEvent.publish(event);
 
         log.info(

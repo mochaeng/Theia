@@ -4,6 +4,7 @@ plugins {
 	id 'io.spring.dependency-management' version '1.1.7'
     id 'com.diffplug.spotless' version '7.2.1'
     id 'com.github.spotbugs' version "6.2.5"
+	id 'jacoco'
 }
 
 group = 'com.mochaeng'
@@ -23,6 +24,15 @@ spotless {
     }
 }
 
+jacocoTestReport {
+	dependsOn test
+	reports {
+		xml.required = true
+		csv.required = false
+		html.required = true
+	}
+}
+
 configurations {
 	compileOnly {
 		extendsFrom annotationProcessor
@@ -36,6 +46,7 @@ repositories {
 ext {
 	set('springAiVersion', "1.0.1")
     set('awsSdkVersion', "2.32.27")
+	set('testcontainers.version', "1.20.0")
 }
 
 dependencies {
@@ -49,13 +60,28 @@ dependencies {
 	implementation 'org.flywaydb:flyway-core'
 	implementation 'org.flywaydb:flyway-database-postgresql'
 
-	compileOnly 'org.projectlombok:lombok'
-	developmentOnly 'org.springframework.boot:spring-boot-devtools'
-	runtimeOnly 'org.postgresql:postgresql'
-	annotationProcessor 'org.projectlombok:lombok'
+	testImplementation 'org.testcontainers:junit-jupiter'
+	testImplementation 'org.testcontainers:postgresql'
+	testImplementation 'org.testcontainers:kafka'
+	testImplementation 'org.testcontainers:minio'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.kafka:spring-kafka-test'
-    testImplementation 'org.mockito:mockito-core:5.+'
+	testImplementation 'org.mockito:mockito-core:5.+'
+	testImplementation 'org.awaitility:awaitility:4.3.0'
+
+
+	compileOnly 'org.projectlombok:lombok'
+
+	developmentOnly 'org.springframework.boot:spring-boot-devtools'
+
+	runtimeOnly 'org.postgresql:postgresql'
+
+	annotationProcessor 'org.projectlombok:lombok'
+
+	testCompileOnly 'org.projectlombok:lombok'
+
+	testAnnotationProcessor 'org.projectlombok:lombok'
+
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 

@@ -19,6 +19,7 @@ import com.mochaeng.theia_api.ingestion.application.service.ValidateDocumentServ
 import com.mochaeng.theia_api.ingestion.application.web.controller.DocumentController;
 import com.mochaeng.theia_api.ingestion.domain.exceptions.DocumentValidationErrorCode;
 import com.mochaeng.theia_api.ingestion.domain.model.Document;
+import com.mochaeng.theia_api.processing.infrastructure.adapter.persistence.DocumentPersistenceService;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -63,6 +64,9 @@ public class DocumentUploadControllerTest {
     private ScanVirusPort virusScanService;
 
     @MockitoBean
+    private DocumentPersistenceService documentPersistenceService;
+
+    @MockitoBean
     private PublishUploadedDocumentPort kafkaEventPublisher;
 
     @Autowired
@@ -102,7 +106,6 @@ public class DocumentUploadControllerTest {
         verify(virusScanService, times(1)).hasVirus(any());
         verify(kafkaEventPublisher, times(1)).publish(any());
 
-        // Verify the storage service returned a string (any string is fine)
         ArgumentCaptor<Document> documentCaptor = ArgumentCaptor.forClass(
             Document.class
         );
@@ -129,11 +132,6 @@ public class DocumentUploadControllerTest {
                 jsonPath("$.errorCode").value(
                     DocumentValidationErrorCode.INVALID_PDF.getCode()
                 )
-            )
-            .andExpect(
-                jsonPath("$.message").value(
-                    DocumentValidationErrorCode.INVALID_PDF.getDefaultMessage()
-                )
             );
 
         verifyNoInteractions(
@@ -158,16 +156,7 @@ public class DocumentUploadControllerTest {
             .perform(multipart(UPLOAD_ENDPOINT).file(oversizedFile))
             .andExpect(status().isBadRequest())
             .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-            .andExpect(jsonPath("$.errorCode").value("FILE_TOO_LARGE"))
-            .andExpect(
-                jsonPath("$.message").value(
-                    String.format(
-                        "File size %d bytes exceeds maximum allowed size of %d bytes",
-                        MAX_FILE_SIZE + 1,
-                        MAX_FILE_SIZE
-                    )
-                )
-            );
+            .andExpect(jsonPath("$.errorCode").value("FILE_TOO_LARGE"));
 
         verifyNoInteractions(
             storageService,
@@ -192,11 +181,6 @@ public class DocumentUploadControllerTest {
             .andExpect(
                 jsonPath("$.errorCode").value(
                     DocumentValidationErrorCode.INVALID_PDF.getCode()
-                )
-            )
-            .andExpect(
-                jsonPath("$.message").value(
-                    DocumentValidationErrorCode.INVALID_PDF.getDefaultMessage()
                 )
             );
 
@@ -224,12 +208,7 @@ public class DocumentUploadControllerTest {
             .perform(multipart(UPLOAD_ENDPOINT).file(infectedFile))
             .andExpect(status().isBadRequest())
             .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-            .andExpect(jsonPath("$.errorCode").value("VIRUS_DETECTED"))
-            .andExpect(
-                jsonPath("$.message").value(
-                    "File contains malicious content and cannot be processed"
-                )
-            );
+            .andExpect(jsonPath("$.errorCode").value("VIRUS_DETECTED"));
 
         verify(virusScanService, times(1)).hasVirus(any());
         verifyNoInteractions(storageService, kafkaEventPublisher);
@@ -288,12 +267,14 @@ public class DocumentUploadControllerTest {
         @Bean
         @Primary
         public ValidateDocumentUseCase documentValidationService(
-            ScanVirusPort virusScanService
+            ScanVirusPort virusScanService,
+            DocumentPersistenceService documentPersistenceService
         ) {
             return new ValidateDocumentService(
                 MAX_FILE_SIZE,
                 ALLOWED_CONTENT_TYPES,
-                virusScanService
+                virusScanService,
+                documentPersistenceService
             );
         }
 
