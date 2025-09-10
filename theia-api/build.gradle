@@ -64,6 +64,7 @@ dependencies {
 	testImplementation 'org.testcontainers:postgresql'
 	testImplementation 'org.testcontainers:kafka'
 	testImplementation 'org.testcontainers:minio'
+	testImplementation 'org.testcontainers:ollama'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.kafka:spring-kafka-test'
 	testImplementation 'org.mockito:mockito-core:5.+'

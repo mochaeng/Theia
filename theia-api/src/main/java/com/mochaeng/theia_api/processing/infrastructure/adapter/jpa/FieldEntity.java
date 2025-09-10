@@ -4,9 +4,7 @@ import jakarta.persistence.*;
 import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Set;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.processing.SQL;
 import org.hibernate.proxy.HibernateProxy;
@@ -17,6 +15,8 @@ import org.hibernate.type.SqlTypes;
 @Builder
 @Entity
 @Table(name = "document_field")
+@NoArgsConstructor
+@AllArgsConstructor
 public class FieldEntity {
 
     @Id

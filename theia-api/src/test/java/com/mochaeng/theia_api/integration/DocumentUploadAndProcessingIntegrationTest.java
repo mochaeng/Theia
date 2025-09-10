@@ -1,11 +1,13 @@
 package com.mochaeng.theia_api.integration;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.awaitility.Awaitility.await;
 
 import com.mochaeng.theia_api.ingestion.application.web.dto.UploadDocumentResponse;
+import com.mochaeng.theia_api.processing.infrastructure.adapter.jpa.JpaDocumentRepository;
+import com.mochaeng.theia_api.processing.infrastructure.adapter.jpa.JpaFieldRepository;
 import com.mochaeng.theia_api.shared.application.dto.DocumentUploadedMessage;
+import java.io.IOException;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -31,12 +33,14 @@ import org.springframework.kafka.support.serializer.JsonDeserializer;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.util.LinkedMultiValueMap;
+import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.MinIOContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.kafka.KafkaContainer;
+import org.testcontainers.ollama.OllamaContainer;
 import org.testcontainers.shaded.org.awaitility.core.ConditionTimeoutException;
 import org.testcontainers.utility.DockerImageName;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -45,7 +49,7 @@ import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Testcontainers
 @Slf4j
-public class DocumentUploadIntegrationTest {
+public class DocumentUploadAndProcessingIntegrationTest {
 
     @LocalServerPort
     private int port;
@@ -55,6 +59,12 @@ public class DocumentUploadIntegrationTest {
 
     @Autowired
     private S3Client s3Client;
+
+    @Autowired
+    private JpaDocumentRepository documentRepository;
+
+    @Autowired
+    private JpaFieldRepository fieldRepository;
 
     @Value("${kafka.topics.document-uploaded}")
     private String documentUploadedTopic;
@@ -84,34 +94,22 @@ public class DocumentUploadIntegrationTest {
         ).asCompatibleSubstituteFor("postgres")
     );
 
+    @Container
+    @SuppressWarnings("resource")
+    static GenericContainer<?> grobid = new GenericContainer<>(
+        DockerImageName.parse("lfoppiano/grobid:latest-crf")
+    )
+        .withExposedPorts(8070)
+        .waitingFor(Wait.forHttp("/api/isalive").forStatusCode(200));
+
+    @Container
+    static OllamaContainer ollama = new OllamaContainer("ollama/ollama:0.11.8");
+
     private Consumer<String, DocumentUploadedMessage> kafkaConsumer;
 
     @Test
-    void shouldUploadDocumentAndPublishKafkaEvent() throws Exception {
-        var bitcoinPdf = new ClassPathResource("/test-files/bitcoin.pdf");
-        assertThat(bitcoinPdf.exists()).isTrue();
-
-        var parts = new LinkedMultiValueMap<>();
-        parts.add("file", bitcoinPdf);
-
-        var headers = new HttpHeaders();
-        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
-
-        var requestEntity = new HttpEntity<>(parts, headers);
-        var response = restTemplate.exchange(
-            "http://localhost:" + port + "/api/upload-document",
-            HttpMethod.POST,
-            requestEntity,
-            UploadDocumentResponse.class
-        );
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).isNotNull();
-
-        var documentID = response.getBody().documentID();
-        assertThat(documentID).isNotNull();
-        var docUUID = UUID.fromString(documentID);
-        assertThat(docUUID).isNotNull();
+    void shouldProcessDocumentEndToEnd() throws Exception {
+        var docUUID = uploadDocument("/test-files/bitcoin.pdf");
 
         var kafkaEvent = waitForKafkaEvent(docUUID);
         assertThat(kafkaEvent).isPresent();
@@ -122,7 +120,9 @@ public class DocumentUploadIntegrationTest {
         );
         assertThat(kafkaEvent.get().fileSizeBytes()).isGreaterThan(0);
 
-        verifyFileExistsInS3(kafkaEvent.get().bucketPath());
+        assertFileExistsInS3(kafkaEvent.get().bucketPath());
+
+        assertDocumentExistsInDatabase(docUUID);
     }
 
     @Test
@@ -133,6 +133,16 @@ public class DocumentUploadIntegrationTest {
         kafka.start();
         postgres.start();
         minio.start();
+
+        grobid.start();
+
+        ollama.start();
+
+        try {
+            ollama.execInContainer("ollama", "pull", "nomic-embed-text:latest");
+        } catch (IOException | InterruptedException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @AfterAll
@@ -140,6 +150,8 @@ public class DocumentUploadIntegrationTest {
         kafka.stop();
         postgres.stop();
         minio.stop();
+        grobid.stop();
+        ollama.stop();
     }
 
     @DynamicPropertySource
@@ -168,11 +180,61 @@ public class DocumentUploadIntegrationTest {
         log.info("test setup completed");
     }
 
-    private void verifyFileExistsInS3(String s3Path) {
-        try {
-//            var s3Key = s3Path.startsWith("/") ? s3Path.substring(1) : s3Path;
+    private UUID uploadDocument(String filePath) {
+        var document = new ClassPathResource(filePath);
+        assertThat(document.exists()).isTrue();
 
-            log.info("Verifying file in S3 - Bucket: {}, Key: {}", bucketName, s3Path);
+        var parts = new LinkedMultiValueMap<>();
+        parts.add("file", document);
+
+        var headers = new HttpHeaders();
+        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+
+        var requestEntity = new HttpEntity<>(parts, headers);
+        var response = restTemplate.exchange(
+            "http://localhost:" + port + "/api/upload-document",
+            HttpMethod.POST,
+            requestEntity,
+            UploadDocumentResponse.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+
+        var documentID = response.getBody().documentID();
+        assertThat(documentID).isNotNull();
+        var docUUID = UUID.fromString(documentID);
+        assertThat(docUUID).isNotNull();
+
+        return docUUID;
+    }
+
+    private void assertDocumentExistsInDatabase(UUID id) {
+        await()
+            .atMost(Duration.ofSeconds(30))
+            .pollInterval(Duration.ofSeconds(1))
+            .until(() -> documentRepository.findById(id).isPresent());
+
+        var document = documentRepository
+            .findById(id)
+            .orElseThrow(() ->
+                new AssertionError(
+                    "document with id [%s] not found in database".formatted(id)
+                )
+            );
+
+
+        log.info("this is the document: {}", document);
+        assertThat(document).isNotNull();
+    }
+
+    private void assertFileExistsInS3(String s3Path) {
+        try {
+            log.info(
+                "Verifying file in S3 - Bucket: {}, Key: {}",
+                bucketName,
+                s3Path
+            );
 
             var headResponse = s3Client.headObject(builder -> {
                 builder.bucket(bucketName).key(s3Path);
