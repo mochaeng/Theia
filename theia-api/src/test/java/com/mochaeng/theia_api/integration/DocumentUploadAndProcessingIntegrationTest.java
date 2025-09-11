@@ -161,6 +161,12 @@ public class DocumentUploadAndProcessingIntegrationTest {
             kafka::getBootstrapServers
         );
 
+        registry.add(
+            "parser.grobid.base-url",
+            () ->
+                "http://" + grobid.getHost() + ":" + grobid.getMappedPort(8070)
+        );
+
         registry.add("storage.s3.endpoint", minio::getS3URL);
         registry.add("storage.s3.access-key", minio::getUserName);
         registry.add("storage.s3.secret-access-key", minio::getPassword);
@@ -211,8 +217,8 @@ public class DocumentUploadAndProcessingIntegrationTest {
 
     private void assertDocumentExistsInDatabase(UUID id) {
         await()
-            .atMost(Duration.ofSeconds(30))
-            .pollInterval(Duration.ofSeconds(1))
+            .atMost(Duration.ofMinutes(5))
+            .pollInterval(Duration.ofSeconds(5))
             .until(() -> documentRepository.findById(id).isPresent());
 
         var document = documentRepository
@@ -222,7 +228,6 @@ public class DocumentUploadAndProcessingIntegrationTest {
                     "document with id [%s] not found in database".formatted(id)
                 )
             );
-
 
         log.info("this is the document: {}", document);
         assertThat(document).isNotNull();

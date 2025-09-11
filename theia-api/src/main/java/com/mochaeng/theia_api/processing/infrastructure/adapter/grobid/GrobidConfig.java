@@ -6,6 +6,7 @@ import com.mochaeng.theia_api.processing.infrastructure.adapter.grobid.exception
 import com.mochaeng.theia_api.shared.config.helpers.SharedConfigHelpers;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatusCode;
@@ -18,6 +19,7 @@ import org.springframework.web.client.RestClient;
 
 @Configuration
 @RequiredArgsConstructor
+@EnableConfigurationProperties(GrobidProperties.class)
 public class GrobidConfig {
 
     private final GrobidProperties props;
@@ -25,7 +27,7 @@ public class GrobidConfig {
     @Bean("grobidRestClient")
     public RestClient getRestClient() {
         return RestClient.builder()
-            .baseUrl(props.getBaseUrl())
+            .baseUrl(props.baseUrl())
             .requestFactory(createRequestFactory())
             .defaultStatusHandler(
                 HttpStatusCode::is5xxServerError,
@@ -51,7 +53,7 @@ public class GrobidConfig {
         RetryTemplate retryTemplate = new RetryTemplate();
 
         RetryPolicy retryPolicy = new SimpleRetryPolicy(
-            props.getMaxRetries(),
+            props.maxRetries(),
             Map.of(
                 GrobidServerException.class,
                 true,
@@ -65,16 +67,16 @@ public class GrobidConfig {
         return SharedConfigHelpers.getRetryTemplate(
             retryTemplate,
             retryPolicy,
-            props.getRetryDelay(),
-            props.getRetryMultiplier()
+            props.retryDelay(),
+            props.retryMultiplier()
         );
     }
 
     private ClientHttpRequestFactory createRequestFactory() {
         SimpleClientHttpRequestFactory factory =
             new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout((int) props.getConnectTimeout().toMillis());
-        factory.setReadTimeout((int) props.getReadTimeout().toMillis());
+        factory.setConnectTimeout((int) props.connectTimeout().toMillis());
+        factory.setReadTimeout((int) props.readTimeout().toMillis());
         return factory;
     }
 }

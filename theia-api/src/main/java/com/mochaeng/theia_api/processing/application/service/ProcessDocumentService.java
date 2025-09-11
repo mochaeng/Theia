@@ -37,6 +37,7 @@ public class ProcessDocumentService implements ProcessDocumentUseCase {
         );
         if (!metadataResult.isSuccess()) {
             // publish failed extract event to kafka
+            log.info("extraction failed: {}",  metadataResult.errorMessage());
             return;
         }
         log.info(

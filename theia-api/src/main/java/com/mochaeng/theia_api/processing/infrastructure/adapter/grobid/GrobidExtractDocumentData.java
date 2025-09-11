@@ -145,7 +145,7 @@ public class GrobidExtractDocumentData implements ExtractDocumentDataPort {
             .contentType(MediaType.APPLICATION_PDF);
         builder.part(
             "consolidateHeader",
-            grobidProperties.getConsolidateHeader().getValue()
+            grobidProperties.consolidateHeader().getValue()
         );
 
         try {
