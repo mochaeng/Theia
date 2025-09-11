@@ -7,7 +7,9 @@ import java.util.Objects;
 import java.util.Set;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import org.hibernate.Hibernate;
 import org.hibernate.proxy.HibernateProxy;
 
 @Entity
@@ -63,14 +65,14 @@ public class AuthorEntity {
     public final boolean equals(Object o) {
         if (this == o) return true;
         if (o == null) return false;
-        Class<?> oEffectiveClass = o instanceof HibernateProxy
-            ? ((HibernateProxy) o).getHibernateLazyInitializer().getPersistentClass()
-            : o.getClass();
-        Class<?> thisEffectiveClass = this instanceof HibernateProxy
-            ? ((HibernateProxy) this).getHibernateLazyInitializer().getPersistentClass()
-            : this.getClass();
+
+        Class<?> oEffectiveClass = Hibernate.getClass(o);
+        Class<?> thisEffectiveClass = Hibernate.getClass(this);
+
         if (thisEffectiveClass != oEffectiveClass) return false;
-        AuthorEntity that = (AuthorEntity) o;
+
+        if (!(o instanceof AuthorEntity that)) return false;
+
         return id != null && Objects.equals(id, that.id);
     }
 

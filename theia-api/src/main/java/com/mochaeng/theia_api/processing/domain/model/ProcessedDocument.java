@@ -1,6 +1,8 @@
 package com.mochaeng.theia_api.processing.domain.model;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import lombok.Builder;
@@ -17,6 +19,16 @@ public record ProcessedDocument(
     Instant createdAt,
     Instant updatedAt
 ) {
+    public ProcessedDocument {
+        if (fileHash != null) {
+            fileHash = Arrays.copyOf(fileHash, fileHash.length);
+        }
+        fieldEmbeddings = fieldEmbeddings == null
+            ? new ArrayList<>()
+            : List.copyOf(fieldEmbeddings);
+        authors = authors == null ? new ArrayList<>() : List.copyOf(authors);
+    }
+
     public static ProcessedDocument from(
         DocumentMetadata metadata,
         byte[] fileHash,
@@ -36,5 +48,23 @@ public record ProcessedDocument(
 
     public boolean hasEmbeddings() {
         return fieldEmbeddings != null && !fieldEmbeddings.isEmpty();
+    }
+
+    @Override
+    public byte[] fileHash() {
+        if (fileHash == null) {
+            return null;
+        }
+        return Arrays.copyOf(fileHash, fileHash.length);
+    }
+
+    @Override
+    public List<FieldEmbedding> fieldEmbeddings() {
+        return new ArrayList<>(fieldEmbeddings);
+    }
+
+    @Override
+    public List<Author> authors() {
+        return new ArrayList<>(authors);
     }
 }

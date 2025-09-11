@@ -207,7 +207,9 @@ public class DocumentUploadAndProcessingIntegrationTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isNotNull();
 
-        var documentID = response.getBody().documentID();
+        var body = response.getBody();
+        assertThat(body).isNotNull();
+        var documentID = body.documentID();
         assertThat(documentID).isNotNull();
         var docUUID = UUID.fromString(documentID);
         assertThat(docUUID).isNotNull();

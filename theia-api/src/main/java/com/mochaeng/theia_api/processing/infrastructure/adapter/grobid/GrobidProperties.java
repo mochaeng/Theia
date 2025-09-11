@@ -8,15 +8,14 @@ import org.springframework.stereotype.Component;
 
 @ConfigurationProperties(prefix = "parser.grobid")
 public record GrobidProperties(
-     String baseUrl,
-     ConsolidateHeaderMode consolidateHeader,
-     Duration connectTimeout,
-     Duration readTimeout,
-     int maxRetries,
-     Duration retryDelay,
-     float retryMultiplier
+    String baseUrl,
+    ConsolidateHeaderMode consolidateHeader,
+    Duration connectTimeout,
+    Duration readTimeout,
+    int maxRetries,
+    Duration retryDelay,
+    float retryMultiplier
 ) {
-
     @Getter
     public enum ConsolidateHeaderMode {
         NONE("0"),

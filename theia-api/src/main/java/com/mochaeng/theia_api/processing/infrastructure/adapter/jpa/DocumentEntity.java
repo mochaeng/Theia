@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import java.time.Instant;
 import java.util.*;
 import lombok.*;
+import org.hibernate.Hibernate;
 import org.hibernate.proxy.HibernateProxy;
 
 @Builder
@@ -81,15 +82,15 @@ public class DocumentEntity {
     public final boolean equals(Object o) {
         if (this == o) return true;
         if (o == null) return false;
-        Class<?> oEffectiveClass = o instanceof HibernateProxy
-            ? ((HibernateProxy) o).getHibernateLazyInitializer().getPersistentClass()
-            : o.getClass();
-        Class<?> thisEffectiveClass = this instanceof HibernateProxy
-            ? ((HibernateProxy) this).getHibernateLazyInitializer().getPersistentClass()
-            : this.getClass();
+
+        Class<?> oEffectiveClass = Hibernate.getClass(o);
+        Class<?> thisEffectiveClass = Hibernate.getClass(this);
+
         if (thisEffectiveClass != oEffectiveClass) return false;
-        DocumentEntity that = (DocumentEntity) o;
-        return getId() != null && Objects.equals(getId(), that.getId());
+
+        if (!(o instanceof DocumentEntity that)) return false;
+
+        return getId() != null && Objects.equals(getId(), that.id);
     }
 
     @Override

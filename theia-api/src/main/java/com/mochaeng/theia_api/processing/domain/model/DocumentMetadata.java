@@ -14,6 +14,8 @@ public record DocumentMetadata(
     Map<String, Object> additionalMetadata
 ) {
     public DocumentMetadata {
+        authors = authors == null ? null : List.copyOf(authors);
+
         additionalMetadata = additionalMetadata == null
             ? null
             : Map.copyOf(additionalMetadata);

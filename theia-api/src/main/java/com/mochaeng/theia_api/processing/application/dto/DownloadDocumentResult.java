@@ -22,6 +22,10 @@ public record DownloadDocumentResult(
         if (content != null) {
             content = Arrays.copyOf(content, content.length);
         }
+
+        if (hash != null) {
+            hash = Arrays.copyOf(hash, hash.length);
+        }
     }
 
     @Override
@@ -30,6 +34,14 @@ public record DownloadDocumentResult(
             return null;
         }
         return Arrays.copyOf(content, content.length);
+    }
+
+    @Override
+    public byte[] hash() {
+        if (hash == null) {
+            return null;
+        }
+        return Arrays.copyOf(hash, hash.length);
     }
 
     public static DownloadDocumentResult success(byte[] content, byte[] hash) {

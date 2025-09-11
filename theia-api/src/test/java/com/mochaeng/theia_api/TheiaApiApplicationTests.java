@@ -14,30 +14,22 @@ import org.testcontainers.utility.DockerImageName;
 @ActiveProfiles("test")
 @Testcontainers
 class TheiaApiApplicationTests {
-    //    @MockitoBean
-    //    private PublishUploadedDocumentEventPort kafkaEventPublisher;
-    //
-    //    @MockitoBean
-    //    private KafkaConfig kafkaConfig;
-    //
-    //    @MockitoBean
-    //    private KafkaTopicConfig kafkaTopicConfig;
-    //
-    //    @MockitoBean
-    //    private KafkaListenerContainerFactory kafkaListenerContainerFactory;
-    //    @Container
-    //    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>(
-    //        DockerImageName.parse("pgvector/pgvector:pg17-trixie")
-    //            .asCompatibleSubstituteFor("postgres")
-    //    );
-    //
-    //    @DynamicPropertySource
-    //    static void configureProperties(DynamicPropertyRegistry registry) {
-    //        registry.add("spring.datasource.url", postgres::getJdbcUrl);
-    //        registry.add("spring.datasource.username", postgres::getUsername);
-    //        registry.add("spring.datasource.password", postgres::getPassword);
-    //        registry.add("spring.flyway.enabled", () -> "true");
-    //    }
-    //    @Test
-    //    void contextLoads() {}
+
+    @Container
+    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>(
+        DockerImageName.parse(
+            "pgvector/pgvector:pg17-trixie"
+        ).asCompatibleSubstituteFor("postgres")
+    );
+
+    @DynamicPropertySource
+    static void configureProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.datasource.url", postgres::getJdbcUrl);
+        registry.add("spring.datasource.username", postgres::getUsername);
+        registry.add("spring.datasource.password", postgres::getPassword);
+        registry.add("spring.flyway.enabled", () -> "true");
+    }
+
+    @Test
+    void contextLoads() {}
 }
