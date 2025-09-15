@@ -44,31 +44,30 @@ public class OllamaGenerateDocumentEmbedding
 
         for (var entry : fieldTexts.entrySet()) {
             var field = entry.getKey();
-            var text = TextNormalizer.forEmbedding(
+            var textEmbedding = TextNormalizer.forNomic(
                 entry.getValue(),
                 props.getMaxTextLength()
             );
 
-            if (text.isEmpty()) {
+            if (textEmbedding.isEmpty()) {
                 log.debug("skipping empty text for field: {}", field);
                 continue;
             }
 
-            var fieldResult = generateFieldEmbedding(field, text);
-            fieldResult.fold(
-                error -> {
-                    log.warn(
-                        "failed to generate embedding for field {}: {}",
-                        field,
-                        error
-                    );
-                    return null;
-                },
-                fieldEmbedding -> {
-                    fieldEmbeddings.add(fieldEmbedding);
-                    return fieldEmbedding;
-                }
-            );
+            generateFieldEmbedding(field, textEmbedding).fold(
+                    error -> {
+                        log.warn(
+                            "failed to generate embedding for field {}: {}",
+                            field,
+                            error
+                        );
+                        return null;
+                    },
+                    fieldEmbedding -> {
+                        fieldEmbeddings.add(fieldEmbedding);
+                        return fieldEmbedding;
+                    }
+                );
         }
 
         if (fieldEmbeddings.isEmpty()) {
