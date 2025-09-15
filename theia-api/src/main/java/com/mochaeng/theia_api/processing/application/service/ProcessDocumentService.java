@@ -27,7 +27,6 @@ public class ProcessDocumentService implements ProcessDocumentUseCase {
 
         var downloadResult = downloadDocument.download(message);
         if (!downloadResult.isSuccess()) {
-            // publish failed download event to kafka
             return;
         }
 
@@ -36,7 +35,6 @@ public class ProcessDocumentService implements ProcessDocumentUseCase {
             downloadResult.content()
         );
         if (!metadataResult.isSuccess()) {
-            // publish failed extract event to kafka
             log.info("extraction failed: {}", metadataResult.errorMessage());
             return;
         }
@@ -46,20 +44,20 @@ public class ProcessDocumentService implements ProcessDocumentUseCase {
             metadataResult.metadata()
         );
 
-        var embeddingsResult = generateDocumentEmbeddings.generate(
+        var embeddings = generateDocumentEmbeddings.generate(
             metadataResult.metadata()
         );
-        if (!embeddingsResult.isSuccess()) {
-            // publish failed embeddings event to kafka
+        if (embeddings.isLeft()) {
             return;
         }
-        log.info("Embeddings generated successfully");
+
+        log.info("embeddings generated successfully");
 
         var processedDocument = ProcessedDocument.from(
             metadataResult.metadata(),
             downloadResult.hash(),
             message.bucketPath(),
-            embeddingsResult.embedding()
+            embeddings.get()
         );
         log.info("document to be saved: {}", processedDocument);
         var persistenceResult = documentPersistence.save(processedDocument);

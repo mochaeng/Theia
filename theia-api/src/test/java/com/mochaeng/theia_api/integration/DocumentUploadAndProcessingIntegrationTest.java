@@ -109,7 +109,7 @@ public class DocumentUploadAndProcessingIntegrationTest {
 
     @Test
     void shouldProcessDocumentEndToEnd() throws Exception {
-        var docUUID = uploadDocument("/test-files/bitcoin.pdf");
+        var docUUID = assertUploadDocument("/test-files/bitcoin.pdf");
 
         var kafkaEvent = waitForKafkaEvent(docUUID);
         assertThat(kafkaEvent).isPresent();
@@ -124,9 +124,6 @@ public class DocumentUploadAndProcessingIntegrationTest {
 
         assertDocumentExistsInDatabase(docUUID);
     }
-
-    @Test
-    void shouldRejectInvalidFileType() throws Exception {}
 
     @BeforeAll
     static void beforeAll() {
@@ -186,7 +183,7 @@ public class DocumentUploadAndProcessingIntegrationTest {
         log.info("test setup completed");
     }
 
-    private UUID uploadDocument(String filePath) {
+    private UUID assertUploadDocument(String filePath) {
         var document = new ClassPathResource(filePath);
         assertThat(document.exists()).isTrue();
 

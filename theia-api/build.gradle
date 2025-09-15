@@ -13,7 +13,7 @@ description = 'Demo project for Spring Boot'
 
 java {
 	toolchain {
-		languageVersion = JavaLanguageVersion.of(17)
+		languageVersion = JavaLanguageVersion.of(21)
 	}
 }
 
@@ -47,6 +47,7 @@ ext {
 	set('springAiVersion', "1.0.1")
     set('awsSdkVersion', "2.32.27")
 	set('testcontainers.version', "1.20.1")
+	set('resilience4jVersion', "2.2.0")
 }
 
 dependencies {
@@ -59,6 +60,10 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'org.flywaydb:flyway-core'
 	implementation 'org.flywaydb:flyway-database-postgresql'
+	implementation 'io.vavr:vavr:0.10.7'
+	implementation "io.github.resilience4j:resilience4j-spring-boot3:${resilience4jVersion}"
+	implementation "org.springframework.boot:spring-boot-starter-actuator"
+	implementation "org.springframework.boot:spring-boot-starter-aop"
 
 	testImplementation 'org.testcontainers:junit-jupiter'
 	testImplementation 'org.testcontainers:postgresql'

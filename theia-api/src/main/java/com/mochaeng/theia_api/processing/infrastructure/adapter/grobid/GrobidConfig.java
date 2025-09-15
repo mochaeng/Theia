@@ -3,7 +3,7 @@ package com.mochaeng.theia_api.processing.infrastructure.adapter.grobid;
 import com.mochaeng.theia_api.processing.infrastructure.adapter.grobid.exception.GrobidClientException;
 import com.mochaeng.theia_api.processing.infrastructure.adapter.grobid.exception.GrobidServerException;
 import com.mochaeng.theia_api.processing.infrastructure.adapter.grobid.exception.GrobidTimeoutException;
-import com.mochaeng.theia_api.shared.config.helpers.SharedConfigHelpers;
+import com.mochaeng.theia_api.shared.infrastructure.helpers.SharedConfigHelpers;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;

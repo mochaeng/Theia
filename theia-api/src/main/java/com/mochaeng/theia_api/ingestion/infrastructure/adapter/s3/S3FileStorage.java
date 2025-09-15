@@ -2,7 +2,7 @@ package com.mochaeng.theia_api.ingestion.infrastructure.adapter.s3;
 
 import com.mochaeng.theia_api.ingestion.application.port.out.FileStoragePort;
 import com.mochaeng.theia_api.ingestion.domain.model.Document;
-import com.mochaeng.theia_api.shared.config.s3.S3Properties;
+import com.mochaeng.theia_api.shared.infrastructure.s3.S3Properties;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

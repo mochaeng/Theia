@@ -1,0 +1,39 @@
+package com.mochaeng.theia_api.shared.infrastructure.ollama.dto;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+public record OllamaResponse(
+    String model,
+    float[][] embeddings,
+
+    @JsonProperty("total_duration") long totalDuration,
+
+    @JsonProperty("load_duration") long loadDuration,
+
+    @JsonProperty("prompt_eval_count") int promptEvalCount
+) {
+    public OllamaResponse {
+        embeddings = embeddings == null ? null : embeddings.clone();
+    }
+
+    public boolean hasEmbeddings() {
+        return (
+            embeddings != null &&
+            embeddings.length > 0 &&
+            embeddings[0].length > 0
+        );
+    }
+
+    public float[] getFirstEmbedding() {
+        return hasEmbeddings() ? embeddings[0] : null;
+    }
+
+    public long getProcessingTimeMs() {
+        return totalDuration / 1_000_000;
+    }
+
+    @Override
+    public float[][] embeddings() {
+        return embeddings == null ? null : embeddings.clone();
+    }
+}

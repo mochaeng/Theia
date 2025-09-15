@@ -1,6 +1,5 @@
 package com.mochaeng.theia_api.processing.infrastructure.adapter.ollama;
 
-import com.mochaeng.theia_api.processing.application.dto.EmbeddingDocumentResult;
 import com.mochaeng.theia_api.processing.application.port.out.GenerateDocumentEmbeddingsPort;
 import com.mochaeng.theia_api.processing.application.service.DocumentFieldBuilder;
 import com.mochaeng.theia_api.processing.domain.model.DocumentEmbeddings;
@@ -8,25 +7,18 @@ import com.mochaeng.theia_api.processing.domain.model.DocumentField;
 import com.mochaeng.theia_api.processing.domain.model.DocumentMetadata;
 import com.mochaeng.theia_api.processing.domain.model.EmbeddingMetadata;
 import com.mochaeng.theia_api.processing.domain.model.FieldEmbedding;
-import com.mochaeng.theia_api.processing.infrastructure.adapter.ollama.dto.OllamaRequest;
-import com.mochaeng.theia_api.processing.infrastructure.adapter.ollama.dto.OllamaResponse;
-import com.mochaeng.theia_api.processing.infrastructure.adapter.ollama.exception.OllamaException;
-import com.mochaeng.theia_api.processing.infrastructure.adapter.ollama.exception.OllamaInvalidResponse;
-import com.mochaeng.theia_api.processing.infrastructure.adapter.ollama.exception.OllamaTimeoutException;
-import com.mochaeng.theia_api.processing.infrastructure.adapter.ollama.exception.OllamaUnavailableException;
+import com.mochaeng.theia_api.shared.application.error.EmbeddingGenerationError;
 import com.mochaeng.theia_api.shared.domain.TextNormalizer;
-import java.net.SocketTimeoutException;
+import com.mochaeng.theia_api.shared.infrastructure.ollama.OllamaError;
+import com.mochaeng.theia_api.shared.infrastructure.ollama.OllamaHelpers;
+import com.mochaeng.theia_api.shared.infrastructure.ollama.OllamaProperties;
+import io.vavr.control.Either;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.http.MediaType;
-import org.springframework.retry.support.RetryTemplate;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.ResourceAccessException;
-import org.springframework.web.client.RestClient;
 
 @Component("ollamaGenerateDocumentEmbedding")
 @RequiredArgsConstructor
@@ -34,210 +26,141 @@ import org.springframework.web.client.RestClient;
 public class OllamaGenerateDocumentEmbedding
     implements GenerateDocumentEmbeddingsPort {
 
-    @Qualifier("ollamaRestClient")
-    private final RestClient restClient;
-
-    @Qualifier("ollamaRetryTemplate")
-    private final RetryTemplate retryTemplate;
-
-    private final OllamaProperties props;
+    private final OllamaHelpers ollamaHelpers;
     private final DocumentFieldBuilder textBuilder;
+    private final OllamaProperties props;
 
     @Override
-    public EmbeddingDocumentResult generate(DocumentMetadata metadata) {
+    public Either<EmbeddingGenerationError, DocumentEmbeddings> generate(
+        DocumentMetadata metadata
+    ) {
         log.info(
-            "Generating embeddings for document: {}",
+            "generating embeddings for document with id [{}]",
             metadata.documentId()
         );
 
-        try {
-            var fieldTexts = textBuilder.buildFieldTexts(metadata);
-            var fieldEmbeddings = new ArrayList<FieldEmbedding>();
+        var fieldTexts = textBuilder.buildFieldTexts(metadata);
+        var fieldEmbeddings = new ArrayList<FieldEmbedding>();
 
-            for (var entry : fieldTexts.entrySet()) {
-                var field = entry.getKey();
-                var text = TextNormalizer.forEmbedding(
-                    entry.getValue(),
-                    props.getMaxTextLength()
-                );
+        for (var entry : fieldTexts.entrySet()) {
+            var field = entry.getKey();
+            var text = TextNormalizer.forEmbedding(
+                entry.getValue(),
+                props.getMaxTextLength()
+            );
 
-                if (text.isEmpty()) {
-                    log.debug("Skipping empty text for field: {}", field);
-                    continue;
-                }
-
-                try {
-                    var fieldEmbedding = generateFieldEmbedding(field, text);
-                    fieldEmbeddings.add(fieldEmbedding);
-                } catch (OllamaException e) {
-                    log.warn(
-                        "Failed to generate embedding for field {} - {}",
-                        field,
-                        e.getMessage()
-                    );
-                }
+            if (text.isEmpty()) {
+                log.debug("skipping empty text for field: {}", field);
+                continue;
             }
 
-            var documentEmbeddings = DocumentEmbeddings.builder()
-                .documentId(metadata.documentId())
-                .fieldEmbeddings(fieldEmbeddings)
-                .build();
-
-            log.info(
-                "Successfully generated embeddings for {} fields of document: {}",
-                fieldEmbeddings.size(),
-                metadata.documentId()
-            );
-
-            return EmbeddingDocumentResult.success(documentEmbeddings);
-        } catch (Exception e) {
-            log.error(
-                "Error generating embeddings for document: {}",
-                metadata.documentId(),
-                e
-            );
-            return EmbeddingDocumentResult.failure(
-                "UNEXPECTED_ERROR",
-                "Unexpected error: " + e.getMessage()
+            var fieldResult = generateFieldEmbedding(field, text);
+            fieldResult.fold(
+                error -> {
+                    log.warn(
+                        "failed to generate embedding for field {}: {}",
+                        field,
+                        error
+                    );
+                    return null;
+                },
+                fieldEmbedding -> {
+                    fieldEmbeddings.add(fieldEmbedding);
+                    return fieldEmbedding;
+                }
             );
         }
-    }
 
-    private FieldEmbedding generateFieldEmbedding(
-        DocumentField field,
-        String text
-    ) {
+        if (fieldEmbeddings.isEmpty()) {
+            return Either.left(
+                new EmbeddingGenerationError.UnknownError(
+                    "failed to generate any embedding",
+                    ""
+                )
+            );
+        }
+
+        var documentEmbeddings = DocumentEmbeddings.builder()
+            .documentId(metadata.documentId())
+            .fieldEmbeddings(fieldEmbeddings)
+            .build();
+
         log.info(
-            "Generating embedding for field {}, text length: {}",
-            field,
-            text.length()
+            "successfully generated embeddings for {} fields for document with id [{}]",
+            fieldEmbeddings.size(),
+            metadata.documentId()
         );
 
+        return Either.right(documentEmbeddings);
+    }
+
+    private Either<
+        EmbeddingGenerationError,
+        FieldEmbedding
+    > generateFieldEmbedding(DocumentField field, String text) {
+        log.info("generating embedding for field {}", field);
+
         var startingTime = Instant.now();
-        try {
-            var response = makeOllamaCallWithRetry(text);
+        return ollamaHelpers
+            .makeOllamaCall(text)
+            .mapLeft(this::mapOllamaError)
+            .map(ollamaResponse -> {
+                var endTime = Instant.now();
+                var totalTime = Duration.between(
+                    startingTime,
+                    endTime
+                ).toMillis();
 
-            var endTime = Instant.now();
-            var totalTime = Duration.between(startingTime, endTime).toMillis();
+                var fieldEmbedding = FieldEmbedding.builder()
+                    .fieldName(field)
+                    .embedding(ollamaResponse.getFirstEmbedding())
+                    .text(text)
+                    .metadata(
+                        EmbeddingMetadata.builder()
+                            .model(ollamaResponse.model())
+                            .tokenCount(ollamaResponse.promptEvalCount())
+                            .processingTimeMs(totalTime)
+                            .build()
+                    )
+                    .build();
 
-            var fieldEmbedding = FieldEmbedding.builder()
-                .fieldName(field)
-                .embedding(response.getFirstEmbedding())
-                .text(text)
-                .metadata(
-                    EmbeddingMetadata.builder()
-                        .model(response.model())
-                        .tokenCount(response.promptEvalCount())
-                        .processingTimeMs(totalTime)
-                        .build()
-                )
-                .build();
+                log.info(
+                    "successfully embedded field '{}' with '{}' dimensions in {}ms",
+                    field,
+                    fieldEmbedding.dimensions(),
+                    totalTime
+                );
 
-            log.info(
-                "Successfully embedded field '{}' with {} dimensions in {}ms",
-                field,
-                fieldEmbedding.dimensions(),
-                totalTime
-            );
-
-            return fieldEmbedding;
-        } catch (OllamaException e) {
-            log.warn("Ollama error for field {}:{}", field, e.getMessage());
-            throw e;
-        } catch (Exception e) {
-            log.warn("Unexpected error for field {}:{}", field, e.getMessage());
-            throw new OllamaException(
-                "Unexpected error for field {}" + field,
-                "UNEXPECTED_ERROR",
-                e
-            );
-        }
+                return fieldEmbedding;
+            });
     }
 
-    private OllamaResponse makeOllamaCallWithRetry(String text) {
-        return retryTemplate.execute(context -> {
-            if (context.getRetryCount() > 0) {
-                log.debug(
-                    "Retrying Ollama call (attempt {})",
-                    context.getRetryCount() + 1
-                );
-            }
-            return makeOllamaCall(text);
-        });
-    }
-
-    private OllamaResponse makeOllamaCall(String text) {
-        log.info("Making HTTP Call to Ollama");
-
-        try {
-            var request = new OllamaRequest(
-                props.getModel(),
-                text,
-                props.getKeepAlive()
-            );
-
-            var response = restClient
-                .post()
-                .uri("/api/embed")
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(request)
-                .retrieve()
-                .body(OllamaResponse.class);
-
-            if (response == null) {
-                throw new OllamaInvalidResponse("Null response from Ollama");
-            }
-
-            if (!response.hasEmbeddings()) {
-                throw new OllamaInvalidResponse(
-                    "Response contains no embeddings"
-                );
-            }
-
-            if (
-                response.getFirstEmbedding() == null ||
-                response.getFirstEmbedding().length == 0
-            ) {
-                throw new OllamaInvalidResponse(
-                    "Empty embeddings array in response"
-                );
-            }
-
-            return response;
-        } catch (ResourceAccessException e) {
-            log.debug(
-                "ResourceAccessException for Ollama details - message: {}, cause: {}, cause type: {}",
-                e.getMessage(),
-                e.getCause(),
-                e.getCause() != null
-                    ? e.getCause().getClass().getName()
-                    : "null"
-            );
-
-            Throwable cause = e.getCause();
-
-            if (cause instanceof SocketTimeoutException) {
-                throw new OllamaTimeoutException(
-                    "Timeout while calling Ollama",
-                    cause
-                );
-            }
-
-            if (
-                cause instanceof java.net.ConnectException ||
-                cause instanceof java.net.UnknownHostException
-            ) {
-                throw new OllamaUnavailableException(
-                    "Ollama service is unreachable",
-                    cause
-                );
-            }
-
-            throw new OllamaException(
-                "Network error calling Ollama",
-                "NETWORK_ERROR",
-                e
-            );
-        }
+    private EmbeddingGenerationError mapOllamaError(OllamaError ollamaError) {
+        return switch (ollamaError) {
+            case OllamaError.Timeout(
+                var msg,
+                var details
+            ) -> new EmbeddingGenerationError.ProcessingTimeout(msg, details);
+            case OllamaError.Unavailable(
+                var msg,
+                var details
+            ) -> new EmbeddingGenerationError.ServiceUnavailable(msg, details);
+            case OllamaError.InvalidInput(
+                var msg,
+                var details
+            ) -> new EmbeddingGenerationError.InvalidInput(msg, details);
+            case OllamaError.InvalidResponse(
+                var msg,
+                var details
+            ) -> new EmbeddingGenerationError.InvalidResponse(msg, details);
+            case OllamaError.NetworkError(
+                var msg,
+                var details
+            ) -> new EmbeddingGenerationError.ServiceUnavailable(msg, details);
+            case OllamaError.UnknownError(
+                var msg,
+                var details
+            ) -> new EmbeddingGenerationError.UnknownError(msg, details);
+        };
     }
 }

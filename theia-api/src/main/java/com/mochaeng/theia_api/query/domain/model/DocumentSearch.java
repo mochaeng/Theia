@@ -1,0 +1,15 @@
+package com.mochaeng.theia_api.query.domain.model;
+
+import com.mochaeng.theia_api.processing.domain.model.Author;
+import java.time.Instant;
+import java.util.List;
+import java.util.UUID;
+
+public record DocumentSearch(
+    UUID documentID,
+    String title,
+    Float similarity,
+    List<Author> authors,
+    Instant createdAt,
+    Instant updatedAt
+) {}
