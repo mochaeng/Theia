@@ -1,11 +1,14 @@
 package com.mochaeng.theia_api.shared.infrastructure.ollama;
 
+import com.mochaeng.theia_api.shared.application.error.EmbeddingError;
 import com.mochaeng.theia_api.shared.infrastructure.ollama.dto.OllamaRequest;
 import com.mochaeng.theia_api.shared.infrastructure.ollama.dto.OllamaResponse;
 import io.github.resilience4j.retry.Retry;
 import io.vavr.control.Either;
 import io.vavr.control.Try;
+import java.net.ConnectException;
 import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -27,7 +30,7 @@ public class OllamaHelpers {
 
     private final OllamaProperties props;
 
-    public Either<OllamaError, OllamaResponse> makeOllamaCall(String text) {
+    public Either<EmbeddingError, OllamaResponse> makeOllamaCall(String text) {
         return validateInput(text).flatMap(validText -> {
                 var supplier = Retry.decorateSupplier(retry, () ->
                     performHttpCall(validText)
@@ -56,71 +59,67 @@ public class OllamaHelpers {
             .body(OllamaResponse.class);
 
         if (response == null) {
-            throw new RuntimeException("Null response from ollama");
+            throw new RuntimeException("Received null response from ollama");
         }
 
         if (!response.hasEmbeddings()) {
-            throw new RuntimeException("Response contains no embeddings");
+            throw new RuntimeException(
+                "Ollama response contains no embeddings array"
+            );
         }
 
         if (
             response.getFirstEmbedding() == null ||
             response.getFirstEmbedding().length == 0
         ) {
-            throw new RuntimeException("Empty embeddings array in response");
+            throw new RuntimeException(
+                "Ollama response contains empty embeddings array"
+            );
         }
 
         return response;
     }
 
-    private OllamaError mapThrowableToError(Throwable throwable) {
+    private EmbeddingError mapThrowableToError(Throwable throwable) {
         return switch (throwable) {
-            case ResourceAccessException ex -> mapResourceAccessException(ex);
-            case SocketTimeoutException ex -> new OllamaError.Timeout(
-                "Socket timeout occurred",
-                ex.getMessage()
+            case ResourceAccessException e -> mapResourceAccessException(e);
+            case RuntimeException e -> new EmbeddingError.InvalidInput(
+                "Unexpected error during ollama call: %s".formatted(
+                    e.getMessage()
+                )
             );
-            case RuntimeException ex when (
-                ex.getMessage() != null && ex.getMessage().contains("timeout")
-            ) -> new OllamaError.Timeout("Request timeout", ex.getMessage());
-            default -> new OllamaError.UnknownError(
-                "Unexpected error occurred",
-                throwable.getClass().getName() + ": " + throwable.getMessage()
+            case null, default -> new EmbeddingError.UnknownError(
+                "Unexpected error occurred while calling ollama"
             );
         };
     }
 
-    private OllamaError mapResourceAccessException(
+    private EmbeddingError mapResourceAccessException(
         ResourceAccessException exception
     ) {
         var cause = exception.getCause();
 
         return switch (cause) {
-            case SocketTimeoutException e -> new OllamaError.Timeout(
-                "Timeout while calling Ollama",
-                "Socket timeout: " + e.getMessage()
+            case SocketTimeoutException e -> new EmbeddingError.UnavailableService(
+                "Ollama request timed out: %s".formatted(e.getMessage())
             );
-            case java.net.ConnectException e -> new OllamaError.Unavailable(
-                "Ollama service is unreachable",
-                "Connection refused: " + e.getMessage()
+            case ConnectException e -> new EmbeddingError.UnavailableService(
+                "Ollama service is unreachable: %s".formatted(e.getMessage())
             );
-            case java.net.UnknownHostException e -> new OllamaError.Unavailable(
-                "Ollama host is unknown",
-                "Unknown host: " + e.getMessage()
+            case UnknownHostException e -> new EmbeddingError.UnavailableService(
+                "Cannot resolve ollama host: %s".formatted(e.getMessage())
             );
-            case null, default -> new OllamaError.NetworkError(
-                "Network error calling Ollama",
-                exception.getMessage()
+            case null, default -> new EmbeddingError.UnknownError(
+                "Network connectivity issue"
             );
         };
     }
 
-    private Either<OllamaError, String> validateInput(String text) {
+    private Either<EmbeddingError, String> validateInput(String text) {
         if (text == null || text.trim().isEmpty()) {
             return Either.left(
-                new OllamaError.InvalidInput(
-                    "Input text cannot be null or empty",
-                    "Received"
+                new EmbeddingError.InvalidInput(
+                    "Input text cannot be null or empty"
                 )
             );
         }

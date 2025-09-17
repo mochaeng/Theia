@@ -1,4 +1,4 @@
-package com.mochaeng.theia_api.processing.infrastructure.adapter.jpa;
+package com.mochaeng.theia_api.shared.infrastructure.jpa;
 
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;

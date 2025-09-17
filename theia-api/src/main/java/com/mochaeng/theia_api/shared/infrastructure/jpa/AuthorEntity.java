@@ -1,4 +1,4 @@
-package com.mochaeng.theia_api.processing.infrastructure.adapter.jpa;
+package com.mochaeng.theia_api.shared.infrastructure.jpa;
 
 import jakarta.persistence.*;
 import java.time.Instant;
@@ -7,7 +7,6 @@ import java.util.Objects;
 import java.util.Set;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import org.hibernate.Hibernate;
 import org.hibernate.proxy.HibernateProxy;

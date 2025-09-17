@@ -4,9 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import com.mochaeng.theia_api.ingestion.application.web.dto.UploadDocumentResponse;
-import com.mochaeng.theia_api.processing.infrastructure.adapter.jpa.JpaDocumentRepository;
-import com.mochaeng.theia_api.processing.infrastructure.adapter.jpa.JpaFieldRepository;
 import com.mochaeng.theia_api.shared.application.dto.DocumentUploadedMessage;
+import com.mochaeng.theia_api.shared.infrastructure.jpa.JpaDocumentRepository;
+import com.mochaeng.theia_api.shared.infrastructure.jpa.JpaFieldRepository;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.*;

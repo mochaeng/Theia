@@ -7,20 +7,17 @@ import com.mochaeng.theia_api.processing.domain.model.DocumentField;
 import com.mochaeng.theia_api.processing.domain.model.DocumentMetadata;
 import com.mochaeng.theia_api.processing.domain.model.EmbeddingMetadata;
 import com.mochaeng.theia_api.processing.domain.model.FieldEmbedding;
-import com.mochaeng.theia_api.shared.application.error.EmbeddingGenerationError;
+import com.mochaeng.theia_api.shared.application.error.EmbeddingError;
 import com.mochaeng.theia_api.shared.domain.TextNormalizer;
-import com.mochaeng.theia_api.shared.infrastructure.ollama.OllamaError;
 import com.mochaeng.theia_api.shared.infrastructure.ollama.OllamaHelpers;
 import com.mochaeng.theia_api.shared.infrastructure.ollama.OllamaProperties;
 import io.vavr.control.Either;
-import java.time.Duration;
-import java.time.Instant;
 import java.util.ArrayList;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-@Component("ollamaGenerateDocumentEmbedding")
+@Component
 @RequiredArgsConstructor
 @Slf4j
 public class OllamaGenerateDocumentEmbedding
@@ -31,7 +28,7 @@ public class OllamaGenerateDocumentEmbedding
     private final OllamaProperties props;
 
     @Override
-    public Either<EmbeddingGenerationError, DocumentEmbeddings> generate(
+    public Either<EmbeddingError, DocumentEmbeddings> generate(
         DocumentMetadata metadata
     ) {
         log.info(
@@ -42,6 +39,7 @@ public class OllamaGenerateDocumentEmbedding
         var fieldTexts = textBuilder.buildFieldTexts(metadata);
         var fieldEmbeddings = new ArrayList<FieldEmbedding>();
 
+        // TODO: sending all requests fields at once to ollama
         for (var entry : fieldTexts.entrySet()) {
             var field = entry.getKey();
             var textEmbedding = TextNormalizer.forNomic(
@@ -54,27 +52,21 @@ public class OllamaGenerateDocumentEmbedding
                 continue;
             }
 
-            generateFieldEmbedding(field, textEmbedding).fold(
-                    error -> {
-                        log.warn(
-                            "failed to generate embedding for field {}: {}",
-                            field,
-                            error
-                        );
-                        return null;
-                    },
-                    fieldEmbedding -> {
-                        fieldEmbeddings.add(fieldEmbedding);
-                        return fieldEmbedding;
-                    }
+            generateFieldEmbedding(field, textEmbedding)
+                .peek(fieldEmbeddings::add)
+                .peekLeft(error ->
+                    log.warn(
+                        "failed to generate embedding for field {}: {}",
+                        field,
+                        error
+                    )
                 );
         }
 
         if (fieldEmbeddings.isEmpty()) {
             return Either.left(
-                new EmbeddingGenerationError.UnknownError(
-                    "failed to generate any embedding",
-                    ""
+                new EmbeddingError.UnknownError(
+                    "failed to generate any embedding"
                 )
             );
         }
@@ -85,32 +77,26 @@ public class OllamaGenerateDocumentEmbedding
             .build();
 
         log.info(
-            "successfully generated embeddings for {} fields for document with id [{}]",
-            fieldEmbeddings.size(),
+            "successfully generated embeddings for document with id [{}]",
             metadata.documentId()
         );
 
         return Either.right(documentEmbeddings);
     }
 
-    private Either<
-        EmbeddingGenerationError,
-        FieldEmbedding
-    > generateFieldEmbedding(DocumentField field, String text) {
+    private Either<EmbeddingError, FieldEmbedding> generateFieldEmbedding(
+        DocumentField field,
+        String text
+    ) {
         log.info("generating embedding for field {}", field);
 
-        var startingTime = Instant.now();
+        var startingTime = System.currentTimeMillis();
         return ollamaHelpers
             .makeOllamaCall(text)
-            .mapLeft(this::mapOllamaError)
             .map(ollamaResponse -> {
-                var endTime = Instant.now();
-                var totalTime = Duration.between(
-                    startingTime,
-                    endTime
-                ).toMillis();
+                var totalTime = System.currentTimeMillis() - startingTime;
 
-                var fieldEmbedding = FieldEmbedding.builder()
+                return FieldEmbedding.builder()
                     .fieldName(field)
                     .embedding(ollamaResponse.getFirstEmbedding())
                     .text(text)
@@ -122,44 +108,14 @@ public class OllamaGenerateDocumentEmbedding
                             .build()
                     )
                     .build();
-
+            })
+            .peek(fieldEmbedding -> {
                 log.info(
                     "successfully embedded field '{}' with '{}' dimensions in {}ms",
                     field,
                     fieldEmbedding.dimensions(),
-                    totalTime
+                    fieldEmbedding.metadata().processingTimeMs()
                 );
-
-                return fieldEmbedding;
             });
-    }
-
-    private EmbeddingGenerationError mapOllamaError(OllamaError ollamaError) {
-        return switch (ollamaError) {
-            case OllamaError.Timeout(
-                var msg,
-                var details
-            ) -> new EmbeddingGenerationError.ProcessingTimeout(msg, details);
-            case OllamaError.Unavailable(
-                var msg,
-                var details
-            ) -> new EmbeddingGenerationError.ServiceUnavailable(msg, details);
-            case OllamaError.InvalidInput(
-                var msg,
-                var details
-            ) -> new EmbeddingGenerationError.InvalidInput(msg, details);
-            case OllamaError.InvalidResponse(
-                var msg,
-                var details
-            ) -> new EmbeddingGenerationError.InvalidResponse(msg, details);
-            case OllamaError.NetworkError(
-                var msg,
-                var details
-            ) -> new EmbeddingGenerationError.ServiceUnavailable(msg, details);
-            case OllamaError.UnknownError(
-                var msg,
-                var details
-            ) -> new EmbeddingGenerationError.UnknownError(msg, details);
-        };
     }
 }

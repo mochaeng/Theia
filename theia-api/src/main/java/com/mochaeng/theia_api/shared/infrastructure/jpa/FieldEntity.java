@@ -1,15 +1,10 @@
-package com.mochaeng.theia_api.processing.infrastructure.adapter.jpa;
+package com.mochaeng.theia_api.shared.infrastructure.jpa;
 
 import jakarta.persistence.*;
-import java.util.LinkedHashSet;
 import java.util.Objects;
-import java.util.Set;
 import lombok.*;
 import org.hibernate.Hibernate;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.annotations.processing.SQL;
 import org.hibernate.proxy.HibernateProxy;
-import org.hibernate.type.SqlTypes;
 
 @Getter
 @Setter

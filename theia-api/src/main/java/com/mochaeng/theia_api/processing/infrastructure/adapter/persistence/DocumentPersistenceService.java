@@ -2,8 +2,8 @@ package com.mochaeng.theia_api.processing.infrastructure.adapter.persistence;
 
 import com.mochaeng.theia_api.processing.application.dto.PersistenceDocumentResult;
 import com.mochaeng.theia_api.processing.domain.model.ProcessedDocument;
-import com.mochaeng.theia_api.processing.infrastructure.adapter.jpa.DocumentEntity;
-import com.mochaeng.theia_api.processing.infrastructure.adapter.jpa.JpaDocumentRepository;
+import com.mochaeng.theia_api.shared.infrastructure.jpa.DocumentEntity;
+import com.mochaeng.theia_api.shared.infrastructure.jpa.JpaDocumentRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

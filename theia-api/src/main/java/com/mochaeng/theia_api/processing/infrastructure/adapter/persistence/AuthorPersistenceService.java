@@ -1,8 +1,8 @@
 package com.mochaeng.theia_api.processing.infrastructure.adapter.persistence;
 
 import com.mochaeng.theia_api.processing.domain.model.Author;
-import com.mochaeng.theia_api.processing.infrastructure.adapter.jpa.AuthorEntity;
-import com.mochaeng.theia_api.processing.infrastructure.adapter.jpa.JpaAuthorRepository;
+import com.mochaeng.theia_api.shared.infrastructure.jpa.AuthorEntity;
+import com.mochaeng.theia_api.shared.infrastructure.jpa.JpaAuthorRepository;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;

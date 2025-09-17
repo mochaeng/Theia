@@ -1,9 +1,9 @@
 package com.mochaeng.theia_api.processing.infrastructure.adapter.persistence;
 
 import com.mochaeng.theia_api.processing.domain.model.FieldEmbedding;
-import com.mochaeng.theia_api.processing.infrastructure.adapter.jpa.DocumentEntity;
-import com.mochaeng.theia_api.processing.infrastructure.adapter.jpa.FieldEntity;
-import com.mochaeng.theia_api.processing.infrastructure.adapter.jpa.JpaFieldRepository;
+import com.mochaeng.theia_api.shared.infrastructure.jpa.DocumentEntity;
+import com.mochaeng.theia_api.shared.infrastructure.jpa.FieldEntity;
+import com.mochaeng.theia_api.shared.infrastructure.jpa.JpaFieldRepository;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
