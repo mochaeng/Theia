@@ -1,9 +1,12 @@
 package com.mochaeng.theia_api.query.application.web;
 
 import com.mochaeng.theia_api.query.application.port.in.SearchDocumentUseCase;
+import com.mochaeng.theia_api.query.application.service.errors.DocumentSearchError;
 import com.mochaeng.theia_api.query.application.web.dto.QueryRequest;
 import com.mochaeng.theia_api.query.application.web.dto.QueryResponse;
 import com.mochaeng.theia_api.query.application.web.dto.SearchQuery;
+import com.mochaeng.theia_api.shared.dto.ErrorResponse;
+import io.vavr.control.Either;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,7 +30,7 @@ public class QueryController {
         consumes = MediaType.APPLICATION_JSON_VALUE,
         produces = MediaType.APPLICATION_JSON_VALUE
     )
-    public ResponseEntity<QueryResponse> queryDocument(
+    public ResponseEntity<?> queryDocument(
         @Valid @RequestBody QueryRequest request
     ) {
         log.info(
@@ -43,8 +46,24 @@ public class QueryController {
             request.threshold()
         );
 
-        var search = searchDocument.search(searchQuery);
+        return searchDocument
+            .search(searchQuery)
+            .fold(this::toResponse, search -> {
+                var response = QueryResponse.from(search);
+                return ResponseEntity.ok(response);
+            });
+    }
 
-        return null;
+    private ResponseEntity<ErrorResponse> toResponse(DocumentSearchError e) {
+        return switch (e) {
+            case DocumentSearchError.InvalidInputError(
+                var msg
+            ) -> ResponseEntity.badRequest().body(
+                new ErrorResponse(msg, "/v1/search")
+            );
+            case null, default -> ResponseEntity.badRequest().body(
+                new ErrorResponse("", "/v1/search")
+            );
+        };
     }
 }

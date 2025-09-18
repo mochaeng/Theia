@@ -90,7 +90,7 @@ public class ImplRetrieveDocumentPort implements RetrieveDocumentPort {
                     .filter(d -> "title".equals(d.getFieldType()))
                     .map(JpaFieldRepository.DocumentDisplayResult::getTitle)
                     .findFirst()
-                    .orElse("Unknown");
+                    .orElse("Unknown title");
 
                 accumulator.put(
                     id,

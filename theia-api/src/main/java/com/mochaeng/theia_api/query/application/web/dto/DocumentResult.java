@@ -9,7 +9,7 @@ public record DocumentResult(
     @JsonProperty("documentID") UUID documentID,
 
     String title,
-    Double similarity,
+    Float similarity,
     List<AuthorResult> authors,
 
     @JsonProperty("createdAt") LocalDateTime createdAt,

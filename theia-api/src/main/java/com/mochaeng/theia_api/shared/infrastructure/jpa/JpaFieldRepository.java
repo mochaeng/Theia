@@ -72,7 +72,6 @@ public interface JpaFieldRepository
         String getFilePath();
         String getFieldType();
 
-        Float getSimilarity();
         String getAuthorFirstName();
         String getAuthorLastName();
         String getAuthorEmail();

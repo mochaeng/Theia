@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
@@ -94,6 +95,29 @@ public class GlobalExceptionHandler {
         var errorResponse = new ErrorResponse(
             "MALFORMED_JSON",
             "Request body is invalid or malformed.",
+            extractPath(request)
+        );
+
+        return ResponseEntity.badRequest().body(errorResponse);
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ErrorResponse> handleValidationErrors(
+        MethodArgumentNotValidException ex,
+        WebRequest request
+    ) {
+        var errors = ex
+            .getBindingResult()
+            .getFieldErrors()
+            .stream()
+            .map(err -> err.getField() + ": " + err.getDefaultMessage())
+            .toList();
+
+        log.error("validation failed: {}", errors);
+
+        var errorResponse = new ErrorResponse(
+            "VALIDATION_ERROR",
+            String.join("; ", errors),
             extractPath(request)
         );
 
