@@ -3,17 +3,18 @@ package com.mochaeng.theia_api.query.application.web.dto;
 import com.mochaeng.theia_api.query.application.service.errors.DocumentSearchError;
 import com.mochaeng.theia_api.shared.domain.TextNormalizer;
 import io.vavr.control.Either;
+import java.util.List;
 
 public record SearchQuery(
     String query,
-    String fieldType,
+    List<String> fieldType,
     Integer limit,
     Float threshold,
     float[] embedding
 ) {
     public static SearchQuery of(
         String query,
-        String fieldType,
+        List<String> fieldType,
         Integer limit,
         Float threshold
     ) {

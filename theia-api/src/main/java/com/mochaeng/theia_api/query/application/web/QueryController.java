@@ -1,7 +1,6 @@
 package com.mochaeng.theia_api.query.application.web;
 
 import com.mochaeng.theia_api.query.application.port.in.SearchDocumentUseCase;
-import com.mochaeng.theia_api.query.application.service.SearchDocumentService;
 import com.mochaeng.theia_api.query.application.web.dto.QueryRequest;
 import com.mochaeng.theia_api.query.application.web.dto.QueryResponse;
 import com.mochaeng.theia_api.query.application.web.dto.SearchQuery;
@@ -34,12 +33,12 @@ public class QueryController {
         log.info(
             "received search request for query: '{}' in field: '{}'",
             request.query(),
-            request.field()
+            request.fields()
         );
 
         var searchQuery = SearchQuery.of(
             request.query(),
-            request.field(),
+            request.fields(),
             request.limit(),
             request.threshold()
         );

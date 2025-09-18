@@ -10,6 +10,7 @@ public record DocumentSearch(
     String title,
     Float similarity,
     List<Author> authors,
+    String filePath,
     Instant createdAt,
     Instant updatedAt
 ) {}

@@ -1,6 +1,7 @@
 package com.mochaeng.theia_api.query.application.web.dto;
 
 import jakarta.validation.constraints.*;
+import java.util.List;
 
 public record QueryRequest(
     @NotBlank(message = "Query cannot be blank")
@@ -11,12 +12,13 @@ public record QueryRequest(
     )
     String query,
 
-    @NotBlank
-    @Pattern(
-        regexp = "^(title|abstract|fulltext)$",
-        message = "Field must be one of: title, abstract, fulltext"
-    )
-    String field,
+    @NotEmpty
+    List<
+        @Pattern(
+            regexp = "^(title|abstract|fulltext)$",
+            message = "Field must be one of: title, abstract, fulltext"
+        ) String
+    > fields,
 
     @Min(value = 1, message = "Limit must be at least 1")
     @Max(value = 10, message = "Limit cannot exceed 10")

@@ -1,11 +1,14 @@
 package com.mochaeng.theia_api.shared.exception;
 
+import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
 import com.mochaeng.theia_api.ingestion.domain.exceptions.DocumentValidationException;
 import com.mochaeng.theia_api.processing.application.exceptions.DownloadDocumentException;
 import com.mochaeng.theia_api.shared.dto.ErrorResponse;
+import java.security.UnrecoverableKeyException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
@@ -26,9 +29,9 @@ public class GlobalExceptionHandler {
             ex.getMessage()
         );
 
-        ErrorResponse errorResponse = new ErrorResponse(
+        var errorResponse = new ErrorResponse(
             ex.getErrorCodeValue(),
-            "Failed to validate your document. Try again later",
+            "Failed to validate your document.",
             extractPath(request)
         );
 
@@ -42,7 +45,7 @@ public class GlobalExceptionHandler {
     ) {
         log.warn("Upload size exceeded: {}", ex.getMessage());
 
-        ErrorResponse errorResponse = new ErrorResponse(
+        var errorResponse = new ErrorResponse(
             "FILE_SIZE_EXCEEDED",
             "File size exceeds the maximum allowed limit",
             extractPath(request)
@@ -60,9 +63,37 @@ public class GlobalExceptionHandler {
     ) {
         log.warn("Invalid argument: {}", ex.getMessage());
 
-        ErrorResponse errorResponse = new ErrorResponse(
+        var errorResponse = new ErrorResponse(
             "INVALID_ARGUMENT",
             "Invalid input provided",
+            extractPath(request)
+        );
+
+        return ResponseEntity.badRequest().body(errorResponse);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleHttpMessageNotReadable(
+        HttpMessageNotReadableException ex,
+        WebRequest request
+    ) {
+        if (ex.getCause() instanceof UnrecognizedPropertyException upex) {
+            log.error("Unrecognized property: {}", upex.getPropertyName());
+
+            var errorResponse = new ErrorResponse(
+                "REQUEST_VALIDATION_ERROR",
+                "Request contains unrecognized field: " +
+                upex.getPropertyName(),
+                extractPath(request)
+            );
+
+            return ResponseEntity.badRequest().body(errorResponse);
+        }
+
+        log.error("Malformed JSON request: {}", ex.getMessage());
+        var errorResponse = new ErrorResponse(
+            "MALFORMED_JSON",
+            "Request body is invalid or malformed.",
             extractPath(request)
         );
 
@@ -81,7 +112,7 @@ public class GlobalExceptionHandler {
             ex
         );
 
-        ErrorResponse errorResponse = new ErrorResponse(
+        var errorResponse = new ErrorResponse(
             "INTERNAL_ERROR",
             "An unexpected error occurred. Please try again later.",
             extractPath(request)

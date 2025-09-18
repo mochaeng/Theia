@@ -19,10 +19,15 @@ public class ErrorResponse {
     private String path;
     private Map<String, Object> details;
 
-    public ErrorResponse(String errorCode, String message) {
-        this.errorCode = errorCode;
+    public ErrorResponse(String message) {
         this.message = message;
         this.timestamp = LocalDateTime.now();
+    }
+
+    public ErrorResponse(String message, String path) {
+        this.message = message;
+        this.timestamp = LocalDateTime.now();
+        this.path = path;
     }
 
     public ErrorResponse(String errorCode, String message, String path) {
