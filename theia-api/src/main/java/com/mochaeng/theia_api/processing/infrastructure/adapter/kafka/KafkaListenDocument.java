@@ -10,7 +10,7 @@ import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
 
-@Component("kafkaListenUploadedDocument")
+@Component
 @RequiredArgsConstructor
 @Slf4j
 public class KafkaListenDocument {

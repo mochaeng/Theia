@@ -9,7 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
-@Component("kafkaPublishUploadedDocument")
+@Component
 @Slf4j
 public class KafkaPublishUploadedDocumentEvent
     implements PublishUploadedDocumentPort {
@@ -39,7 +39,7 @@ public class KafkaPublishUploadedDocumentEvent
 
     private void publishEvent(String topic, String key, Object event) {
         log.debug(
-            "Publishing event {} to topic [{}] with key [{}]",
+            "publishing event {} to topic [{}] with key [{}]",
             event,
             topic,
             key
@@ -51,14 +51,14 @@ public class KafkaPublishUploadedDocumentEvent
             .whenComplete((result, ex) -> {
                 if (ex == null) {
                     log.info(
-                        "Event published successfully to topic [{}] with key [{}] at offset {}",
+                        "event published successfully to topic [{}] with key [{}] at offset {}",
                         topic,
                         key,
                         result.getRecordMetadata().offset()
                     );
                 } else {
                     log.error(
-                        "Failed  to publish event to topic [{}] with key [{}]",
+                        "failed  to publish event to topic [{}] with key [{}]",
                         topic,
                         key,
                         ex

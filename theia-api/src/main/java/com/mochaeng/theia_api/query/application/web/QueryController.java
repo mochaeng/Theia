@@ -6,7 +6,6 @@ import com.mochaeng.theia_api.query.application.web.dto.QueryRequest;
 import com.mochaeng.theia_api.query.application.web.dto.QueryResponse;
 import com.mochaeng.theia_api.query.application.web.dto.SearchQuery;
 import com.mochaeng.theia_api.shared.dto.ErrorResponse;
-import io.vavr.control.Either;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

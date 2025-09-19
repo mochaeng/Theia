@@ -24,6 +24,9 @@ public class KafkaTopicConfig {
     @Value("${kafka.topics.document-failed}")
     private String documentFailedTopic;
 
+    @Value("${kafka.topics.document-progress}")
+    private String documentProgressTopic;
+
     @Bean
     public KafkaAdmin kafkaAdmin() {
         Map<String, Object> configs = new HashMap<>();
@@ -47,5 +50,10 @@ public class KafkaTopicConfig {
     @Bean
     public NewTopic documentFailedTopic() {
         return new NewTopic(documentFailedTopic, 3, (short) 1);
+    }
+
+    @Bean
+    public NewTopic documentProgressTopic() {
+        return new NewTopic(documentProgressTopic, 3, (short) 1);
     }
 }

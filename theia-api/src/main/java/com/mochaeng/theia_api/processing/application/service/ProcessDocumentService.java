@@ -1,14 +1,14 @@
 package com.mochaeng.theia_api.processing.application.service;
 
+import com.mochaeng.theia_api.notification.domain.DocumentProgressEvent;
 import com.mochaeng.theia_api.processing.application.port.in.ProcessDocumentUseCase;
-import com.mochaeng.theia_api.processing.application.port.out.DocumentPersistencePort;
-import com.mochaeng.theia_api.processing.application.port.out.DownloadDocumentPort;
-import com.mochaeng.theia_api.processing.application.port.out.ExtractDocumentDataPort;
-import com.mochaeng.theia_api.processing.application.port.out.GenerateDocumentEmbeddingsPort;
+import com.mochaeng.theia_api.processing.application.port.out.*;
 import com.mochaeng.theia_api.processing.domain.model.ProcessedDocument;
 import com.mochaeng.theia_api.shared.application.dto.DocumentUploadedMessage;
+import io.vavr.control.Try;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -20,10 +20,22 @@ public class ProcessDocumentService implements ProcessDocumentUseCase {
     private final ExtractDocumentDataPort extractDocumentData;
     private final GenerateDocumentEmbeddingsPort generateDocumentEmbeddings;
     private final DocumentPersistencePort documentPersistence;
+    private final PublishProgressDocumentEventPort publishProgress;
 
     @Override
     public void process(DocumentUploadedMessage message) {
         log.info("processing uploaded document message event: {}", message);
+
+        Try.run(() -> Thread.sleep(50_000));
+
+        publishProgress.publish(
+           DocumentProgressEvent.now(
+               message.documentID(),
+               "DOWNLOADING",
+               "Start to downloading your file",
+               10
+           )
+        );
 
         var downloadResult = downloadDocument.download(message);
         if (!downloadResult.isSuccess()) {
@@ -70,4 +82,5 @@ public class ProcessDocumentService implements ProcessDocumentUseCase {
             processedDocument.id()
         );
     }
+
 }
