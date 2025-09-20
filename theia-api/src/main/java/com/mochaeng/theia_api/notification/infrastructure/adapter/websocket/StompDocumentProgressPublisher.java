@@ -23,7 +23,6 @@ public class StompDocumentProgressPublisher
             return;
         }
 
-
         var destination = TopicPath.documentProgress(event.documentID());
 
         log.info("sending DocumentProgressEvent: {}", event);

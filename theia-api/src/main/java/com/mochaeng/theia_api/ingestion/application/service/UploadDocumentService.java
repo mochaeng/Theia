@@ -1,11 +1,13 @@
 package com.mochaeng.theia_api.ingestion.application.service;
 
+import com.mochaeng.theia_api.ingestion.application.error.UploadDocumentError;
 import com.mochaeng.theia_api.ingestion.application.port.in.UploadDocumentUseCase;
 import com.mochaeng.theia_api.ingestion.application.port.in.ValidateDocumentUseCase;
 import com.mochaeng.theia_api.ingestion.application.port.out.FileStoragePort;
 import com.mochaeng.theia_api.ingestion.application.port.out.PublishUploadedDocumentPort;
 import com.mochaeng.theia_api.ingestion.domain.model.Document;
 import com.mochaeng.theia_api.shared.application.dto.DocumentUploadedMessage;
+import io.vavr.control.Either;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,12 +23,21 @@ public class UploadDocumentService implements UploadDocumentUseCase {
     private final PublishUploadedDocumentPort publishUploadedDocumentEvent;
 
     @Override
-    public void uploadDocument(Document document) {
-        validateDocument.validate(document);
+    public Either<UploadDocumentError, DocumentUploadedMessage> uploadDocument(
+        Document document
+    ) {
+        var validateResult = validateDocument.validate(document);
+        if (!validateResult.isSuccess()) {
+            return Either.left(
+                new UploadDocumentError.InvalidInput(
+                    "failed to validate document"
+                )
+            );
+        }
 
-        String s3Path = fileStorage.storeDocument(document);
+        var s3Path = fileStorage.storeDocument(document);
 
-        DocumentUploadedMessage event = DocumentUploadedMessage.create(
+        var event = DocumentUploadedMessage.create(
             document.id(),
             document.filename(),
             s3Path,
@@ -41,5 +52,7 @@ public class UploadDocumentService implements UploadDocumentUseCase {
             document.filename(),
             document.id()
         );
+
+        return Either.right(event);
     }
 }

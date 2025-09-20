@@ -6,6 +6,7 @@ import com.mochaeng.theia_api.ingestion.domain.exceptions.DocumentValidationErro
 import com.mochaeng.theia_api.ingestion.domain.exceptions.DocumentValidationException;
 import com.mochaeng.theia_api.ingestion.domain.model.Document;
 import com.mochaeng.theia_api.processing.infrastructure.adapter.persistence.DocumentPersistenceService;
+import io.vavr.control.Try;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -43,20 +44,22 @@ public class ValidateDocumentService implements ValidateDocumentUseCase {
     }
 
     @Override
-    public void validate(Document document) {
-        log.debug("Validating document: {}", document.filename());
+    public Try<Void> validate(Document document) {
+        log.info("validating document: {}", document.filename());
 
-        validateDocumentExistence(document);
-        validateFileSize(document);
-        validatePdfMagicBytes(document);
-        validateStructure(document);
-        validateFileType(document);
-        validateVirusFree(document);
+        return Try.run(() -> {
+            validateDocumentExistence(document);
+            validateFileSize(document);
+            validatePdfMagicBytes(document);
+            validateStructure(document);
+            validateFileType(document);
+            validateVirusFree(document);
 
-        log.debug(
-            "Document validation completed successfully for: {}",
-            document.filename()
-        );
+            log.info(
+                "document validation completed successfully for: {}",
+                document.filename()
+            );
+        });
     }
 
     private void validateDocumentExistence(Document document) {

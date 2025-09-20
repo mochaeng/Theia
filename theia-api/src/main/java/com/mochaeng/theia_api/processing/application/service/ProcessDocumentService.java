@@ -5,10 +5,9 @@ import com.mochaeng.theia_api.processing.application.port.in.ProcessDocumentUseC
 import com.mochaeng.theia_api.processing.application.port.out.*;
 import com.mochaeng.theia_api.processing.domain.model.ProcessedDocument;
 import com.mochaeng.theia_api.shared.application.dto.DocumentUploadedMessage;
-import io.vavr.control.Try;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -26,21 +25,25 @@ public class ProcessDocumentService implements ProcessDocumentUseCase {
     public void process(DocumentUploadedMessage message) {
         log.info("processing uploaded document message event: {}", message);
 
-        Try.run(() -> Thread.sleep(50_000));
-
         publishProgress.publish(
-           DocumentProgressEvent.now(
-               message.documentID(),
-               "DOWNLOADING",
-               "Start to downloading your file",
-               10
-           )
+            DocumentProgressEvent.now(
+                message.documentID(),
+                DocumentProgressEvent.Status.DOWNLOADING
+            )
         );
 
         var downloadResult = downloadDocument.download(message);
         if (!downloadResult.isSuccess()) {
+            publishFailedEvent(message.documentID());
             return;
         }
+
+        publishProgress.publish(
+            DocumentProgressEvent.now(
+                message.documentID(),
+                DocumentProgressEvent.Status.EXTRACTING
+            )
+        );
 
         var metadataResult = extractDocumentData.extract(
             message.documentID(),
@@ -48,6 +51,7 @@ public class ProcessDocumentService implements ProcessDocumentUseCase {
         );
         if (!metadataResult.isSuccess()) {
             log.info("extraction failed: {}", metadataResult.errorMessage());
+            publishFailedEvent(message.documentID());
             return;
         }
         log.info(
@@ -56,14 +60,33 @@ public class ProcessDocumentService implements ProcessDocumentUseCase {
             metadataResult.metadata()
         );
 
+        publishProgress.publish(
+            DocumentProgressEvent.now(
+                message.documentID(),
+                DocumentProgressEvent.Status.EMBEDDING
+            )
+        );
+
         var embeddings = generateDocumentEmbeddings.generate(
             metadataResult.metadata()
         );
         if (embeddings.isLeft()) {
+            log.info(
+                "failed to generate embeddings for [{}]",
+                message.documentID()
+            );
+            publishFailedEvent(message.documentID());
             return;
         }
 
         log.info("embeddings generated successfully");
+
+        publishProgress.publish(
+            DocumentProgressEvent.now(
+                message.documentID(),
+                DocumentProgressEvent.Status.SAVING
+            )
+        );
 
         var processedDocument = ProcessedDocument.from(
             metadataResult.metadata(),
@@ -74,13 +97,32 @@ public class ProcessDocumentService implements ProcessDocumentUseCase {
         log.info("document to be saved: {}", processedDocument);
         var persistenceResult = documentPersistence.save(processedDocument);
         if (!persistenceResult.isSuccess()) {
-            // publish failed persistence event to kafka
+            log.info(
+                "failed to persist document with id [{}]",
+                message.documentID()
+            );
+            publishFailedEvent(message.documentID());
             return;
         }
         log.info(
             "document with id [{}] was persisted successfully",
             processedDocument.id()
         );
+
+        publishProgress.publish(
+            DocumentProgressEvent.now(
+                message.documentID(),
+                DocumentProgressEvent.Status.COMPLETED
+            )
+        );
     }
 
+    private void publishFailedEvent(UUID documentID) {
+        publishProgress.publish(
+            DocumentProgressEvent.now(
+                documentID,
+                DocumentProgressEvent.Status.FAILED
+            )
+        );
+    }
 }
