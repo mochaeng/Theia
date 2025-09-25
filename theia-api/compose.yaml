@@ -1,6 +1,8 @@
 volumes:
   kafka-data:
   postgres-data:
+  keycloak-postgres-data:
+  redis-data:
 #  minio-data:
 
 services:
@@ -73,6 +75,49 @@ services:
     depends_on:
       - kafka
     restart: unless-stopped
+
+  keycloak-db:
+    image: postgres:15
+    container_name: theia-keycloak-db
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: keycloak
+    volumes:
+      - keycloak-postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+
+  keycloak:
+    image: keycloak/keycloak:26.3
+    container_name: theia-keycloak
+    command: start-dev
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://theia-keycloak-db:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: keycloak
+      KC_HOSTNAME: localhost
+    ports:
+      - "8888:8080"
+    depends_on:
+      - keycloak-db
+
+  redis:
+    image: redis:8.2.1
+    container_name: theia-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: [ "redis-server", "--appendonly", "yes" ]
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 #  qdrant:
 #    image: 'qdrant/qdrant:latest'

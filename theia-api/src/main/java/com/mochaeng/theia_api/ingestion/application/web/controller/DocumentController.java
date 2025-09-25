@@ -8,13 +8,9 @@ import com.mochaeng.theia_api.shared.dto.ErrorResponse;
 import java.io.IOException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 @RestController
@@ -34,32 +30,30 @@ public class DocumentController {
         @RequestParam("file") MultipartFile file
     ) throws IOException {
         log.info(
-            "Receive upload request for file: {} (size: {} bytes)",
+            "receive upload request for file: {} (size: {} bytes)",
             file.getOriginalFilename(),
             file.getSize()
         );
 
-        Document document = Document.create(
-            file.getContentType(),
-            file.getBytes()
-        );
+        var document = Document.create(file.getContentType(), file.getBytes());
 
         return uploadDocumentUseCase
             .uploadDocument(document)
             .fold(
-                error -> switch (error) {
-                    case UploadDocumentError.InvalidInput(
-                        var msg
-                    ) -> ResponseEntity.badRequest().body(msg);
-                    case
-                        null,
-                        default -> ResponseEntity.internalServerError().body(
-                        new ErrorResponse(
-                            "Unexpected error while processing document",
-                            "/v1/upload-document"
-                        )
-                    );
-                },
+                error ->
+                    switch (error) {
+                        case UploadDocumentError.InvalidInput(
+                            var msg
+                        ) -> ResponseEntity.badRequest().body(msg);
+                        case
+                            null,
+                            default -> ResponseEntity.internalServerError().body(
+                            new ErrorResponse(
+                                "Unexpected error while processing document",
+                                "/v1/upload-document"
+                            )
+                        );
+                    },
                 success ->
                     ResponseEntity.ok(
                         new UploadDocumentResponse(document.id().toString())
