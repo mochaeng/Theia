@@ -16,8 +16,7 @@ import com.mochaeng.theia_api.ingestion.application.port.out.PublishUploadedDocu
 import com.mochaeng.theia_api.ingestion.application.port.out.ScanVirusPort;
 import com.mochaeng.theia_api.ingestion.application.service.UploadDocumentService;
 import com.mochaeng.theia_api.ingestion.application.service.ValidateDocumentService;
-import com.mochaeng.theia_api.ingestion.application.web.controller.DocumentController;
-import com.mochaeng.theia_api.ingestion.domain.exceptions.DocumentValidationErrorCode;
+import com.mochaeng.theia_api.ingestion.application.web.DocumentController;
 import com.mochaeng.theia_api.ingestion.domain.model.Document;
 import com.mochaeng.theia_api.processing.infrastructure.adapter.persistence.DocumentPersistenceService;
 import java.io.IOException;

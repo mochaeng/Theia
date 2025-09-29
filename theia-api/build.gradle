@@ -50,13 +50,12 @@ ext {
 	set('testcontainers.version', "1.20.1")
 	set('resilience4jVersion', "2.2.0")
 //	set('springCloudVersion', "2025.0.0")
-//	set('springCloudVersion', "2025.1.0-M2")
 }
 
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
-//	implementation "org.springframework.boot:spring-boot-starter-security"
+	implementation "org.springframework.boot:spring-boot-starter-security"
 	implementation 'org.springframework.kafka:spring-kafka'
     implementation 'software.amazon.awssdk:s3'
     implementation 'org.apache.pdfbox:pdfbox:3.0.5'
@@ -71,7 +70,7 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-websocket'
 //	implementation 'org.springframework.cloud:spring-cloud-starter-gateway-server-webmvc'
 //	implementation 'org.springframework.cloud:spring-cloud-gateway-mvc:4.3.1'
-//	implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
+	implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
 //	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 
 //	implementation 'com.bucket4j:bucket4j_jdk17-core:8.15.0'

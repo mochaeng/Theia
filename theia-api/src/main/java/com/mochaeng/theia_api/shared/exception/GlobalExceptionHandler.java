@@ -4,11 +4,14 @@ import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
 import com.mochaeng.theia_api.ingestion.domain.exceptions.DocumentValidationException;
 import com.mochaeng.theia_api.processing.application.exceptions.DownloadDocumentException;
 import com.mochaeng.theia_api.shared.dto.ErrorResponse;
+import java.nio.file.AccessDeniedException;
 import java.security.UnrecoverableKeyException;
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -124,13 +127,34 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(errorResponse);
     }
 
+    @ExceptionHandler(
+        { AccessDeniedException.class, AuthorizationDeniedException.class }
+    )
+    public ResponseEntity<ErrorResponse> handleAccessDenied(
+        Exception ex,
+        WebRequest request
+    ) {
+        log.error(
+            "access denied: {} - {}",
+            ex.getClass().getSimpleName(),
+            ex.getMessage()
+        );
+
+        var errorResponse = new ErrorResponse(
+            "You do not have permission to perform this action",
+            extractPath(request)
+        );
+
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGenericException(
         Exception ex,
         WebRequest request
     ) {
         log.error(
-            "Unexpected error occurred: {} - {}",
+            "unexpected error occurred: {} - {}",
             ex.getClass().getSimpleName(),
             ex.getMessage(),
             ex
