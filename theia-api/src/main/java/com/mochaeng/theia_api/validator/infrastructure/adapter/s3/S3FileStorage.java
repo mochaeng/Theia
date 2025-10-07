@@ -23,12 +23,6 @@ public class S3FileStorage implements FileStoragePort {
         }
 
         return Either.right(file.get().content());
-        //        return s3Helpers
-        //            .download(bucket, key)
-        //            .mapLeft(s3DownloadError ->
-        //                new FileStorageError(s3DownloadError.message())
-        //            )
-        //            .map(S3Helpers.S3DownloadResult::content);
     }
 
     @Override

@@ -6,11 +6,15 @@ import com.mochaeng.theia_api.validator.application.port.in.VerifyDocumentUseCas
 import com.mochaeng.theia_api.validator.application.port.out.*;
 import io.vavr.control.Either;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
 public class VerifyDocumentService implements VerifyDocumentUseCase {
+
+    @Value("${storage.s3.validated-bucket-name}")
+    private String validatedBucketName;
 
     private final FileStoragePort storager;
     private final ValidateDocumentStructurePort validator;
@@ -27,7 +31,10 @@ public class VerifyDocumentService implements VerifyDocumentUseCase {
         // 4. upload to validated bucket
         // 5. publish event
 
-        var documentBytes = storager.download(incomingMessage.bucket(), incomingMessage.key());
+        var documentBytes = storager.download(
+            incomingMessage.bucket(),
+            incomingMessage.key()
+        );
         if (documentBytes.isLeft()) {
             return Either.left(
                 new VerifyDocumentError(
@@ -59,18 +66,24 @@ public class VerifyDocumentService implements VerifyDocumentUseCase {
             );
         }
 
-        if (checkVirus.get()) {
+        var virusSignature = checkVirus.get().signature();
+        if (!virusSignature.isEmpty()) {
             return Either.left(
                 new VerifyDocumentError(
                     "failed to validate document: '%s' contains virus with signature '%s'".formatted(
                         incomingMessage.documentID(),
-                        ""
+                        virusSignature
                     )
                 )
             );
         }
 
-        var bucketPath = storager.upload("", "", "", documentBytes.get());
+        var bucketPath = storager.upload(
+            validatedBucketName,
+            incomingMessage.documentID().toString(),
+            incomingMessage.contentType(),
+            documentBytes.get()
+        );
         if (bucketPath.isLeft()) {
             return Either.left(
                 new VerifyDocumentError(

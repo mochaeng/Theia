@@ -37,19 +37,5 @@ public class KafkaListenIncomingDocument {
         );
 
         Try.run(() -> verifier.verify(message));
-
-        //        var documentBytes = downloadDocument.download("", "");
-        //        if (documentBytes.isLeft()) {
-        //            log.info("failed to download document");
-        //            return;
-        //        }
-
-        //        var isValid = documentService.verify(documentBytes.get());
-        //        if (isValid.isLeft()) {
-        //            log.info("failed to validate document");
-        //            return;
-        //        }
-
-        // update file bucket location
     }
 }

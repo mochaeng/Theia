@@ -40,7 +40,7 @@ public class S3FileStorage implements FileStoragePort {
             s3.putObject(
                 request,
                 RequestBody.fromBytes(
-                    Objects.requireNonNull(document.content())
+                    document.content()
                 )
             );
 

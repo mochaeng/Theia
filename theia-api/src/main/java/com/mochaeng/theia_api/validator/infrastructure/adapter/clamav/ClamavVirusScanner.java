@@ -1,15 +1,14 @@
 package com.mochaeng.theia_api.validator.infrastructure.adapter.clamav;
 
-import com.mochaeng.theia_api.ingestion.domain.model.Document;
 import com.mochaeng.theia_api.validator.application.port.out.VirusScannerPort;
 import io.vavr.control.Either;
+import io.vavr.control.Option;
 import io.vavr.control.Try;
-
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import lombok.extern.slf4j.Slf4j;
@@ -20,7 +19,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class ClamavVirusScanner implements VirusScannerPort {
 
-    private static final int CHUNK_SIZE = 2048;
+    private static final int CHUNK_SIZE = 1024;
     private static final int TIMEOUT_MS = 5000;
 
     private static final int PONG_REPLY_LENGTH = 4;
@@ -33,21 +32,38 @@ public class ClamavVirusScanner implements VirusScannerPort {
 
     @Override
     public Either<ScanError, ScanResult> scan(byte[] content) {
-        Try.withResources(this::createSocket).of(socket -> {
-
+        try (
+            var socket = createSocket();
             var out = new DataOutputStream(socket.getOutputStream());
-            var in = new DataInputStream(socket.getInputStream());
+            var in = new BufferedInputStream(socket.getInputStream())
+        ) {
+            var eicar =
+                "X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*".getBytes(
+                    StandardCharsets.UTF_8
+                );
 
-        })
-//        return Try.withResources(() -> createSocket().get())
-//            .of(this::waitingForPong)
-//            .get()
-//            .toEither()
-//            .mapLeft(ex ->
-//                new ScanError(
-//                    "failed to send ping to clamav: " + ex.getMessage()
-//                )
-//            );
+            var err = streamFile(out, eicar);
+            if (!err.isEmpty()) {
+                return Either.left(
+                    new ScanError("failed to stream file: " + err.get())
+                );
+            }
+
+            var response = readResponse(in);
+            if (response.isLeft()) {
+                return Either.left(
+                    new ScanError(
+                        "failed to read response: " + response.getLeft()
+                    )
+                );
+            }
+
+            return Either.right(response.get());
+        } catch (Exception ex) {
+            return Either.left(
+                new ScanError("unexpected error: " + ex.getMessage())
+            );
+        }
     }
 
     private Socket createSocket() throws IOException {
@@ -60,25 +76,61 @@ public class ClamavVirusScanner implements VirusScannerPort {
         return socket;
     }
 
-    private void streamFile(DataOutputStream out, byte[] content) throws IOException {
+    private Option<String> streamFile(DataOutputStream out, byte[] content) {
+        try {
+            out.write("zINSTREAM\0".getBytes(StandardCharsets.UTF_8));
 
+            var offset = 0;
+            while (offset < content.length) {
+                var chunkSize = Math.min(CHUNK_SIZE, content.length - offset);
+                var sizeBytes = ByteBuffer.allocate(4)
+                    .order(ByteOrder.BIG_ENDIAN)
+                    .putInt(chunkSize)
+                    .array();
+
+                out.write(sizeBytes);
+                out.write(content, offset, chunkSize);
+                offset += chunkSize;
+            }
+
+            out.write(new byte[] { 0, 0, 0, 0 });
+            out.flush();
+
+            return Option.none();
+        } catch (Exception e) {
+            return Option.of(e.getMessage());
+        }
     }
 
-    private Try<Boolean> waitingForPong(Socket socket) {
-        return Try.withResources(socket::getOutputStream).of(out -> {
-                out.write("zPING\0".getBytes(StandardCharsets.UTF_8));
-                out.flush();
-
-                var reply = socket
-                    .getInputStream()
-                    .readNBytes(PONG_REPLY_LENGTH);
-
-                return Arrays.equals(
-                    reply,
-                    "PONG".getBytes(StandardCharsets.UTF_8)
-                );
-            });
+    private Either<String, ScanResult> readResponse(InputStream in) {
+        try {
+            var response = in.readAllBytes();
+            var text = new String(response, StandardCharsets.UTF_8).trim();
+            var parsed = parseTextResponse(text);
+            if (parsed.isLeft()) {
+                return Either.left(parsed.getLeft());
+            }
+            return parsed;
+        } catch (Exception ex) {
+            return Either.left(ex.getMessage());
+        }
     }
 
-    private void writeFullBytes(DataOutputStream out, byte[] data,  )
+    private Either<String, ScanResult> parseTextResponse(String response) {
+        if (response.startsWith("stream:") && response.endsWith("FOUND")) {
+            var colonIdx = response.indexOf(':');
+            var foundIdx = response.lastIndexOf("FOUND");
+            var virusSignature = response
+                .substring(colonIdx + 1, foundIdx)
+                .trim();
+            return Either.right(new ScanResult(Option.of(virusSignature)));
+        }
+        if (response.startsWith("stream:") && response.endsWith("OK")) {
+            return Either.right(new ScanResult(Option.none()));
+        }
+
+        return Either.left(
+            "unexpected response format from clamav: " + response
+        );
+    }
 }
