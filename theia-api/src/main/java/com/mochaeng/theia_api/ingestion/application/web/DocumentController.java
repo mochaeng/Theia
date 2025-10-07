@@ -1,8 +1,8 @@
 package com.mochaeng.theia_api.ingestion.application.web;
 
-import com.mochaeng.theia_api.ingestion.application.error.UploadDocumentError;
-import com.mochaeng.theia_api.ingestion.application.port.in.UploadDocumentUseCase;
+import com.mochaeng.theia_api.ingestion.application.port.in.UploadIncomingDocumentUseCase;
 import com.mochaeng.theia_api.ingestion.domain.model.Document;
+import com.mochaeng.theia_api.shared.application.dto.IncomingDocumentMessage;
 import com.mochaeng.theia_api.shared.dto.ErrorResponse;
 import java.io.IOException;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +21,7 @@ import org.springframework.web.multipart.MultipartFile;
 @Slf4j
 public class DocumentController {
 
-    private final UploadDocumentUseCase uploadDocumentUseCase;
+    private final UploadIncomingDocumentUseCase uploadDocumentUseCase;
 
     @PreAuthorize("hasRole('uploader')")
     @PostMapping(
@@ -39,29 +39,37 @@ public class DocumentController {
             file.getSize()
         );
 
-        var document = Document.create(file.getContentType(), file.getBytes());
+        var userID = jwt.getSubject();
+
+        var document = Document.create(
+            file.getContentType(),
+            userID,
+            file.getBytes()
+        );
+        if (document.isLeft()) {
+            return ResponseEntity.badRequest().body(
+                new ErrorResponse(document.getLeft(), "/v1/upload-document")
+            );
+        }
 
         return uploadDocumentUseCase
-            .uploadDocument(document)
-            .fold(
-                error ->
-                    switch (error) {
-                        case UploadDocumentError.InvalidInput(
-                            var msg
-                        ) -> ResponseEntity.badRequest().body(msg);
-                        case
-                            null,
-                            default -> ResponseEntity.internalServerError().body(
-                            new ErrorResponse(
-                                "Unexpected error while processing document",
-                                "/v1/upload-document"
-                            )
-                        );
-                    },
-                success ->
-                    ResponseEntity.ok(
-                        new UploadDocumentResponse(document.id().toString())
-                    )
-            );
+            .upload(document.get())
+            .fold(this::mapError, this::mapResponse);
+    }
+
+    private ResponseEntity<UploadDocumentResponse> mapResponse(
+        IncomingDocumentMessage msg
+    ) {
+        return ResponseEntity.ok(
+            new UploadDocumentResponse(msg.documentID().toString())
+        );
+    }
+
+    private ResponseEntity<ErrorResponse> mapError(
+        UploadIncomingDocumentUseCase.UploadIncomingDocumentError error
+    ) {
+        return ResponseEntity.badRequest().body(
+            new ErrorResponse("Invalid file type", "/v1/upload-document")
+        );
     }
 }

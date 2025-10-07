@@ -2,7 +2,7 @@ package com.mochaeng.theia_api.processing.infrastructure.adapter.s3;
 
 import com.mochaeng.theia_api.processing.application.dto.DownloadDocumentResult;
 import com.mochaeng.theia_api.processing.application.port.out.DownloadDocumentPort;
-import com.mochaeng.theia_api.shared.application.dto.DocumentUploadedMessage;
+import com.mochaeng.theia_api.shared.application.dto.IncomingDocumentMessage;
 import com.mochaeng.theia_api.shared.infrastructure.s3.S3Properties;
 import java.security.MessageDigest;
 import lombok.RequiredArgsConstructor;
@@ -14,7 +14,7 @@ import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 
-@Component("s3DownloadUploadedDocument")
+@Component
 @RequiredArgsConstructor
 @Slf4j
 public class S3DownloadUploadedDocument implements DownloadDocumentPort {
@@ -23,15 +23,12 @@ public class S3DownloadUploadedDocument implements DownloadDocumentPort {
     private final S3Properties s3Properties;
 
     @Override
-    public DownloadDocumentResult download(DocumentUploadedMessage message) {
-        log.info(
-            "Starting download of document from S3: {}",
-            message.bucketPath()
-        );
+    public DownloadDocumentResult download(IncomingDocumentMessage message) {
+        log.info("starting download of document from S3: {}", message.bucket());
 
-        GetObjectRequest getObjectRequest = GetObjectRequest.builder()
-            .bucket(s3Properties.bucketName())
-            .key(message.bucketPath())
+        var getObjectRequest = GetObjectRequest.builder()
+            .bucket(s3Properties.incomingBucketName())
+            .key("")
             .build();
 
         try {
@@ -71,7 +68,7 @@ public class S3DownloadUploadedDocument implements DownloadDocumentPort {
                 DownloadDocumentResult.ErrorCode.SPECIFIC_ERROR,
                 String.format(
                     "failed to download document from S3: %s. Error: %s",
-                    message.bucketPath(),
+                    "",
                     e.getMessage()
                 )
             );

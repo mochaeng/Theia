@@ -1,7 +1,7 @@
 package com.mochaeng.theia_api.processing.application.port.in;
 
-import com.mochaeng.theia_api.shared.application.dto.DocumentUploadedMessage;
+import com.mochaeng.theia_api.shared.application.dto.IncomingDocumentMessage;
 
 public interface ProcessDocumentUseCase {
-    void process(DocumentUploadedMessage message);
+    void process(IncomingDocumentMessage message);
 }

@@ -1,11 +1,14 @@
 package com.mochaeng.theia_api.ingestion.domain.model;
 
+import io.vavr.control.Either;
 import java.util.UUID;
+import org.springframework.http.MediaType;
 
 public record Document(
     String filename,
     String contentType,
     UUID id,
+    String userID,
     byte[] content
 ) {
     public Document {
@@ -13,13 +16,27 @@ public record Document(
     }
 
     public byte[] content() {
-        return content == null ? null : content.clone();
+        return content == null ? new byte[0] : content.clone();
     }
 
-    public static Document create(String contentType, byte[] content) {
+    public static Either<String, Document> create(
+        String contentType,
+        String userID,
+        byte[] content
+    ) {
+        if (contentType == null || contentType.isEmpty()) {
+            return Either.left("invalid content type");
+        }
+
+        if (!contentType.equals(MediaType.APPLICATION_PDF_VALUE)) {
+            return Either.left("invalid content type");
+        }
+
         UUID id = UUID.randomUUID();
         String filename = id + ".pdf";
 
-        return new Document(filename, contentType, id, content);
+        return Either.right(
+            new Document(filename, contentType, id, userID, content)
+        );
     }
 }

@@ -4,7 +4,7 @@ import com.mochaeng.theia_api.notification.domain.DocumentProgressEvent;
 import com.mochaeng.theia_api.processing.application.port.in.ProcessDocumentUseCase;
 import com.mochaeng.theia_api.processing.application.port.out.*;
 import com.mochaeng.theia_api.processing.domain.model.ProcessedDocument;
-import com.mochaeng.theia_api.shared.application.dto.DocumentUploadedMessage;
+import com.mochaeng.theia_api.shared.application.dto.IncomingDocumentMessage;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,37 +15,37 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class ProcessDocumentService implements ProcessDocumentUseCase {
 
-    private final DownloadDocumentPort downloadDocument;
-    private final ExtractDocumentDataPort extractDocumentData;
-    private final GenerateDocumentEmbeddingsPort generateDocumentEmbeddings;
+    private final DownloadDocumentPort downloader;
+    private final ExtractDocumentDataPort extractor;
+    private final GenerateDocumentEmbeddingsPort embedding;
     private final DocumentPersistencePort documentPersistence;
-    private final PublishProgressDocumentEventPort publishProgress;
+    private final PublishProgressDocumentEventPort publisher;
 
     @Override
-    public void process(DocumentUploadedMessage message) {
+    public void process(IncomingDocumentMessage message) {
         log.info("processing uploaded document message event: {}", message);
 
-        publishProgress.publish(
+        publisher.publish(
             DocumentProgressEvent.now(
                 message.documentID(),
                 DocumentProgressEvent.Status.DOWNLOADING
             )
         );
 
-        var downloadResult = downloadDocument.download(message);
+        var downloadResult = downloader.download(message);
         if (!downloadResult.isSuccess()) {
             publishFailedEvent(message.documentID());
             return;
         }
 
-        publishProgress.publish(
+        publisher.publish(
             DocumentProgressEvent.now(
                 message.documentID(),
                 DocumentProgressEvent.Status.EXTRACTING
             )
         );
 
-        var metadataResult = extractDocumentData.extract(
+        var metadataResult = extractor.extract(
             message.documentID(),
             downloadResult.content()
         );
@@ -60,16 +60,14 @@ public class ProcessDocumentService implements ProcessDocumentUseCase {
             metadataResult.metadata()
         );
 
-        publishProgress.publish(
+        publisher.publish(
             DocumentProgressEvent.now(
                 message.documentID(),
                 DocumentProgressEvent.Status.EMBEDDING
             )
         );
 
-        var embeddings = generateDocumentEmbeddings.generate(
-            metadataResult.metadata()
-        );
+        var embeddings = embedding.generate(metadataResult.metadata());
         if (embeddings.isLeft()) {
             log.info(
                 "failed to generate embeddings for [{}]",
@@ -81,7 +79,7 @@ public class ProcessDocumentService implements ProcessDocumentUseCase {
 
         log.info("embeddings generated successfully");
 
-        publishProgress.publish(
+        publisher.publish(
             DocumentProgressEvent.now(
                 message.documentID(),
                 DocumentProgressEvent.Status.SAVING
@@ -91,7 +89,8 @@ public class ProcessDocumentService implements ProcessDocumentUseCase {
         var processedDocument = ProcessedDocument.from(
             metadataResult.metadata(),
             downloadResult.hash(),
-            message.bucketPath(),
+            //            message.bucketPath(),
+            "",
             embeddings.get()
         );
         log.info("document to be saved: {}", processedDocument);
@@ -109,7 +108,7 @@ public class ProcessDocumentService implements ProcessDocumentUseCase {
             processedDocument.id()
         );
 
-        publishProgress.publish(
+        publisher.publish(
             DocumentProgressEvent.now(
                 message.documentID(),
                 DocumentProgressEvent.Status.COMPLETED
@@ -118,7 +117,7 @@ public class ProcessDocumentService implements ProcessDocumentUseCase {
     }
 
     private void publishFailedEvent(UUID documentID) {
-        publishProgress.publish(
+        publisher.publish(
             DocumentProgressEvent.now(
                 documentID,
                 DocumentProgressEvent.Status.FAILED

@@ -1,20 +1,14 @@
-package com.mochaeng.theia.theia_gateway.config;
-
+package com.mochaeng.theia.theia_gateway.infrastructure.config;
 
 import static org.springframework.cloud.gateway.server.mvc.filter.BeforeFilterFunctions.*;
 import static org.springframework.cloud.gateway.server.mvc.filter.Bucket4jFilterFunctions.rateLimit;
 import static org.springframework.cloud.gateway.server.mvc.handler.GatewayRouterFunctions.route;
 import static org.springframework.cloud.gateway.server.mvc.handler.HandlerFunctions.http;
 
-import io.github.bucket4j.Bandwidth;
-import io.github.bucket4j.BucketConfiguration;
 import java.time.Duration;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.web.servlet.function.RouterFunction;
 import org.springframework.web.servlet.function.ServerRequest;
 import org.springframework.web.servlet.function.ServerResponse;
@@ -30,15 +24,42 @@ public class RoutesConfig {
             .before(uri("http://localhost:8081/api/v1/upload-document"))
             .filter(
                 rateLimit(config ->
-                        config
-                            .setCapacity(100)
-                            .setPeriod(Duration.ofMinutes(1))
-                            .setKeyResolver(request ->
-                                request
-                                    .servletRequest()
-                                    .getUserPrincipal()
-                                    .getName()
-                            )
+                    config
+                        .setCapacity(1)
+                        .setPeriod(Duration.ofMinutes(1))
+                        .setKeyResolver(this::resolveUserKey)
+                )
+            )
+            .build()
+            .and(
+                route("websocket_connection")
+                    .GET("/ws/**", http())
+                    .before(uri("http://localhost:8081/ws"))
+                    .build()
+            );
+    }
+
+    private String resolveUserKey(ServerRequest request) {
+        return request.servletRequest().getUserPrincipal().getName();
+    }
+
+    //    private String resolveUserKey(ServerRequest request) {
+    //        log.info("processing rate limit for request [{}]", request.path());
+    //
+    //        var auth = (Authentication) request.servletRequest().getUserPrincipal();
+    //        if (auth instanceof JwtAuthenticationToken jwtAuthenticationToken) {
+    //            var jwt = jwtAuthenticationToken.getToken();
+    //            var userID = jwt.getClaimAsString("sub");
+    //            if (userID != null) {
+    //                return userID;
+    //            }
+    //        }
+    //
+    //        log.warn("unable to resolve user ID from JWT token");
+    //        return null;
+    //    }
+}
+
 //                        .setConfigurationBuilder(rateLimitConfig ->
 //                            BucketConfiguration.builder()
 //                                .addLimit(
@@ -55,24 +76,3 @@ public class RoutesConfig {
 //                                )
 //                                .build()
 //                        )
-                )
-            )
-            .build();
-    }
-
-    private String resolveUserKey(ServerRequest request) {
-        log.info("processing rate limit for request [{}]", request.path());
-
-        var auth = (Authentication) request.servletRequest().getUserPrincipal();
-        if (auth instanceof JwtAuthenticationToken jwtAuthenticationToken) {
-            var jwt = jwtAuthenticationToken.getToken();
-            var userID = jwt.getClaimAsString("sub");
-            if (userID != null) {
-                return userID;
-            }
-        }
-
-        log.warn("unable to resolve user ID from JWT token");
-        return null;
-    }
-}

@@ -9,13 +9,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.mochaeng.theia_api.ingestion.application.port.in.UploadDocumentUseCase;
-import com.mochaeng.theia_api.ingestion.application.port.in.ValidateDocumentUseCase;
+import com.mochaeng.theia_api.ingestion.application.port.in.AcceptDocumentUseCase;
+import com.mochaeng.theia_api.ingestion.application.port.in.UploadIncomingDocumentUseCase;
 import com.mochaeng.theia_api.ingestion.application.port.out.FileStoragePort;
-import com.mochaeng.theia_api.ingestion.application.port.out.PublishUploadedDocumentPort;
-import com.mochaeng.theia_api.ingestion.application.port.out.ScanVirusPort;
-import com.mochaeng.theia_api.ingestion.application.service.UploadDocumentService;
-import com.mochaeng.theia_api.ingestion.application.service.ValidateDocumentService;
+import com.mochaeng.theia_api.ingestion.application.port.out.PublishIncomingDocumentPort;
+import com.mochaeng.theia_api.ingestion.application.service.AcceptDocumentService;
+import com.mochaeng.theia_api.ingestion.application.service.UploadIncomingDocumentService;
 import com.mochaeng.theia_api.ingestion.application.web.DocumentController;
 import com.mochaeng.theia_api.ingestion.domain.model.Document;
 import com.mochaeng.theia_api.processing.infrastructure.adapter.persistence.DocumentPersistenceService;
@@ -60,13 +59,10 @@ public class DocumentUploadControllerTest {
     private FileStoragePort storageService;
 
     @MockitoBean
-    private ScanVirusPort virusScanService;
-
-    @MockitoBean
     private DocumentPersistenceService documentPersistenceService;
 
     @MockitoBean
-    private PublishUploadedDocumentPort kafkaEventPublisher;
+    private PublishIncomingDocumentPort kafkaEventPublisher;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -77,8 +73,7 @@ public class DocumentUploadControllerTest {
     )
     void uploadDocument_WithValidPDF_ShouldReturnUUID() throws Exception {
         when(storageService.storeDocument(any())).thenReturn("mocked-s3-path");
-        when(virusScanService.hasVirus(any())).thenReturn(false);
-        doNothing().when(kafkaEventPublisher).publish(any());
+        doNothing().when(kafkaEventPublisher).publishAsync(any());
 
         MockMultipartFile bitcoinPdf = createRealPdfFile(
             BITCOIN_PDF_PATH,
@@ -102,8 +97,7 @@ public class DocumentUploadControllerTest {
         assertValidUUID(documentId);
 
         verify(storageService, times(1)).storeDocument(any());
-        verify(virusScanService, times(1)).hasVirus(any());
-        verify(kafkaEventPublisher, times(1)).publish(any());
+        verify(kafkaEventPublisher, times(1)).publishAsync(any());
 
         ArgumentCaptor<Document> documentCaptor = ArgumentCaptor.forClass(
             Document.class
@@ -115,8 +109,6 @@ public class DocumentUploadControllerTest {
     @Test
     @DisplayName("Should reject text file with unsupported content type")
     void uploadDocument_WithTextFile_ShouldReturnBadRequest() throws Exception {
-        when(virusScanService.hasVirus(any())).thenReturn(false);
-
         MockMultipartFile textFile = createMockFile(
             "document.txt",
             MediaType.TEXT_PLAIN_VALUE,
@@ -128,11 +120,7 @@ public class DocumentUploadControllerTest {
             .andExpect(status().isBadRequest())
             .andExpect(content().contentType(MediaType.APPLICATION_JSON));
 
-        verifyNoInteractions(
-            storageService,
-            virusScanService,
-            kafkaEventPublisher
-        );
+        verifyNoInteractions(storageService, kafkaEventPublisher);
     }
 
     @Test
@@ -151,11 +139,7 @@ public class DocumentUploadControllerTest {
             .andExpect(status().isBadRequest())
             .andExpect(content().contentType(MediaType.APPLICATION_JSON));
 
-        verifyNoInteractions(
-            storageService,
-            virusScanService,
-            kafkaEventPublisher
-        );
+        verifyNoInteractions(storageService, kafkaEventPublisher);
     }
 
     @Test
@@ -172,18 +156,13 @@ public class DocumentUploadControllerTest {
             .andExpect(status().isBadRequest())
             .andExpect(content().contentType(MediaType.APPLICATION_JSON));
 
-        verifyNoInteractions(
-            storageService,
-            virusScanService,
-            kafkaEventPublisher
-        );
+        verifyNoInteractions(storageService, kafkaEventPublisher);
     }
 
     @Test
     @DisplayName("Should reject PDF file containing virus")
     void uploadDocument_WithVirusInfectedPDF_ShouldReturnBadRequest()
         throws Exception {
-        when(virusScanService.hasVirus(any())).thenReturn(true);
         MockMultipartFile infectedFile;
 
         infectedFile = createMockFile(
@@ -197,7 +176,6 @@ public class DocumentUploadControllerTest {
             .andExpect(status().isBadRequest())
             .andExpect(content().contentType(MediaType.APPLICATION_JSON));
 
-        verify(virusScanService, times(1)).hasVirus(any());
         verifyNoInteractions(storageService, kafkaEventPublisher);
     }
 
@@ -253,26 +231,23 @@ public class DocumentUploadControllerTest {
 
         @Bean
         @Primary
-        public ValidateDocumentUseCase documentValidationService(
-            ScanVirusPort virusScanService,
+        public AcceptDocumentUseCase documentValidationService(
             DocumentPersistenceService documentPersistenceService
         ) {
-            return new ValidateDocumentService(
+            return new AcceptDocumentService(
                 MAX_FILE_SIZE,
-                ALLOWED_CONTENT_TYPES,
-                virusScanService,
                 documentPersistenceService
             );
         }
 
         @Bean
         @Primary
-        public UploadDocumentUseCase documentService(
-            ValidateDocumentUseCase documentValidationService,
+        public UploadIncomingDocumentUseCase documentService(
+            AcceptDocumentUseCase documentValidationService,
             FileStoragePort storageService,
-            PublishUploadedDocumentPort kafkaEventPublisher
+            PublishIncomingDocumentPort kafkaEventPublisher
         ) {
-            return new UploadDocumentService(
+            return new UploadIncomingDocumentService(
                 documentValidationService,
                 storageService,
                 kafkaEventPublisher

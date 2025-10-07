@@ -1,24 +1,25 @@
 package com.mochaeng.theia_api.ingestion.infrastructure.config;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.Customizer;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
-import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
-import org.springframework.security.web.SecurityFilterChain;
-
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.web.SecurityFilterChain;
 
+@Slf4j
 @EnableMethodSecurity
 @EnableWebSecurity
 @Configuration
@@ -30,41 +31,15 @@ public class SecurityConfig {
             .authorizeHttpRequests(authorizeHttp -> {
                 authorizeHttp.anyRequest().authenticated();
             })
-            .oauth2ResourceServer(
-                oauth2ResourceServer ->
-                    oauth2ResourceServer.jwt(jwt ->
-                        jwt.jwtAuthenticationConverter(
-                            jwtAuthenticationConverter()
-                        )
-                    )
-                //                oauth2ResourceServer.jwt(Customizer.withDefaults())
+            .oauth2ResourceServer(oauth2ResourceServer ->
+                oauth2ResourceServer.jwt(jwt ->
+                    jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())
+                )
             )
             .exceptionHandling(exception ->
                 exception
-                    .authenticationEntryPoint((req, resp, e) -> {
-                        resp.sendError(HttpServletResponse.SC_UNAUTHORIZED);
-                        resp.setContentType("application/json");
-                        resp.setCharacterEncoding("UTF-8");
-                        resp
-                            .getWriter()
-                            .write(
-                                """
-                                { "message": "You must be authenticated to access this resource" }
-                                """
-                            );
-                    })
-                    .accessDeniedHandler((req, resp, e) -> {
-                        resp.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                        resp.setContentType("application/json");
-                        resp.setCharacterEncoding("UTF-8");
-                        resp
-                            .getWriter()
-                            .write(
-                                """
-                                { "message": "You do not have permission to perform this action" }
-                                """
-                            );
-                    })
+                    .authenticationEntryPoint(this::onAuthenticationEntryPoint)
+                    .accessDeniedHandler(this::onAccessDenied)
             )
             .build();
     }
@@ -79,28 +54,58 @@ public class SecurityConfig {
                 return List.of();
             }
 
-            List<String> roles = (List<String>) realmAccess.get("roles");
+            var rolesObj = realmAccess.get("roles");
+            if (!(rolesObj instanceof List<?> roles)) {
+                return List.of();
+            }
 
-            return roles.stream()
+            return roles
+                .stream()
                 .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
                 .collect(Collectors.toList());
         });
 
         return converter;
+    }
 
+    private void onAccessDenied(
+        HttpServletRequest req,
+        HttpServletResponse resp,
+        AccessDeniedException e
+    ) {
+        writeJsonResponse(
+            resp,
+            HttpServletResponse.SC_FORBIDDEN,
+            "You do not have permission to perform this action"
+        );
+    }
 
-//        var grantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
-//
-//        grantedAuthoritiesConverter.setAuthoritiesClaimName(
-//            "realm_access.roles"
-//        );
-//        grantedAuthoritiesConverter.setAuthorityPrefix("ROLE_");
-//
-//        var authenticationConverter = new JwtAuthenticationConverter();
-//        authenticationConverter.setJwtGrantedAuthoritiesConverter(
-//            grantedAuthoritiesConverter
-//        );
-//
-//        return authenticationConverter;
+    private void onAuthenticationEntryPoint(
+        HttpServletRequest req,
+        HttpServletResponse resp,
+        AuthenticationException e
+    ) {
+        writeJsonResponse(
+            resp,
+            HttpServletResponse.SC_UNAUTHORIZED,
+            "You must be authenticated to access this resource"
+        );
+    }
+
+    private void writeJsonResponse(
+        HttpServletResponse resp,
+        int status,
+        String message
+    ) {
+        resp.setStatus(status);
+        resp.setContentType("application/json");
+        resp.setCharacterEncoding("UTF-8");
+
+        try (PrintWriter writer = resp.getWriter()) {
+            writer.write("{\"message\":\"" + message + "\"}");
+            writer.flush();
+        } catch (IOException e) {
+            log.error("failed to write json response: {}", e.getMessage());
+        }
     }
 }

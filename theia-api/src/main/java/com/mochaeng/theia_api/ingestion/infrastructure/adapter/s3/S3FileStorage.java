@@ -3,6 +3,8 @@ package com.mochaeng.theia_api.ingestion.infrastructure.adapter.s3;
 import com.mochaeng.theia_api.ingestion.application.port.out.FileStoragePort;
 import com.mochaeng.theia_api.ingestion.domain.model.Document;
 import com.mochaeng.theia_api.shared.infrastructure.s3.S3Properties;
+import io.vavr.control.Either;
+import io.vavr.control.Try;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,17 +19,20 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 public class S3FileStorage implements FileStoragePort {
 
     private final S3Client s3;
-    private final S3Properties s3Props;
 
     @Override
-    public String storeDocument(Document document) {
-        try {
-            log.info("Storing document: {}", document);
+    public Either<FileStoreError, String> storeDocument(
+        String bucket,
+        String key,
+        Document document
+    ) {
+        return Try.of(() -> {
+            log.info("storing document '{}'", document);
 
-            String key = "/incoming/" + document.filename();
+            //            var key = document.filename();
 
-            PutObjectRequest request = PutObjectRequest.builder()
-                .bucket(s3Props.bucketName())
+            var request = PutObjectRequest.builder()
+                .bucket(bucket)
                 .key(key)
                 .contentType(document.contentType())
                 .build();
@@ -39,14 +44,13 @@ public class S3FileStorage implements FileStoragePort {
                 )
             );
 
-            log.info("document stored successfully");
-
             return key;
-        } catch (Exception e) {
-            throw new RuntimeException(
-                "error uploading document: " + e.getMessage(),
-                e
+        })
+            .toEither()
+            .mapLeft(ex ->
+                new FileStoreError(
+                    "failed to upload document: " + ex.getMessage()
+                )
             );
-        }
     }
 }

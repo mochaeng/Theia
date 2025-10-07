@@ -1,8 +1,8 @@
 package com.mochaeng.theia_api.processing.application.port.out;
 
 import com.mochaeng.theia_api.processing.application.dto.DownloadDocumentResult;
-import com.mochaeng.theia_api.shared.application.dto.DocumentUploadedMessage;
+import com.mochaeng.theia_api.shared.application.dto.IncomingDocumentMessage;
 
 public interface DownloadDocumentPort {
-    DownloadDocumentResult download(DocumentUploadedMessage message);
+    DownloadDocumentResult download(IncomingDocumentMessage message);
 }

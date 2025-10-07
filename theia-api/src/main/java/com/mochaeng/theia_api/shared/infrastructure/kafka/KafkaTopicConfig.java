@@ -18,8 +18,8 @@ public class KafkaTopicConfig {
     @Value("${kafka.topics.document-uploaded}")
     private String documentUploadedTopic;
 
-    @Value("${kafka.topics.document-processed}")
-    private String documentProcessedTopic;
+    @Value("${kafka.topics.document-validated}")
+    private String documentValidatedTopic;
 
     @Value("${kafka.topics.document-failed}")
     private String documentFailedTopic;
@@ -44,7 +44,7 @@ public class KafkaTopicConfig {
 
     @Bean
     public NewTopic documentProcessedTopic() {
-        return new NewTopic(documentProcessedTopic, 3, (short) 1);
+        return new NewTopic(documentValidatedTopic, 3, (short) 1);
     }
 
     @Bean
