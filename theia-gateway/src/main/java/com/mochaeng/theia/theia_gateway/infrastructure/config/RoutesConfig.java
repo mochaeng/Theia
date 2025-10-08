@@ -25,7 +25,7 @@ public class RoutesConfig {
             .filter(
                 rateLimit(config ->
                     config
-                        .setCapacity(1)
+                        .setCapacity(15)
                         .setPeriod(Duration.ofMinutes(1))
                         .setKeyResolver(this::resolveUserKey)
                 )
