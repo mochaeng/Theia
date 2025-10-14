@@ -1,6 +1,5 @@
 package com.mochaeng.theia_api.shared.infrastructure.s3;
 
-import io.vavr.control.Option;
 import io.vavr.control.Try;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -10,7 +9,7 @@ import software.amazon.awssdk.core.sync.ResponseTransformer;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import software.amazon.awssdk.services.s3.model.S3Exception;
+import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 
 @Component
 @RequiredArgsConstructor
@@ -18,14 +17,8 @@ import software.amazon.awssdk.services.s3.model.S3Exception;
 public class S3Helpers {
 
     private final S3Client s3Client;
-    private final S3Properties s3Properties;
 
-    public record S3UploadError(String message) {}
-
-    public Try<byte[]> download(
-        String bucket,
-        String key
-    ) {
+    public Try<byte[]> download(String bucket, String key) {
         log.info(
             "starting to download document from s3 bucket '{}' with key '{}'",
             bucket,
@@ -44,13 +37,13 @@ public class S3Helpers {
         });
     }
 
-    public Option<S3UploadError> storeDocument(
+    public Try<PutObjectResponse> store(
         String bucket,
         String key,
         String contentType,
         byte[] content
     ) {
-        return Try.run(() -> {
+        return Try.of(() -> {
             log.info("storing document '{}' to s3 bucket '{}'", key, bucket);
 
             var request = PutObjectRequest.builder()
@@ -59,24 +52,7 @@ public class S3Helpers {
                 .contentType(contentType)
                 .build();
 
-            var response = s3Client.putObject(request, RequestBody.fromBytes(content));
-        })
-            .toEither()
-            .mapLeft(this::mapUploadException)
-            .fold(
-                Option::some,
-                $ -> Option.none()
-            );
-    }
-
-    private S3UploadError mapUploadException(Throwable e) {
-        return switch (e) {
-            case S3Exception ex -> new S3UploadError(
-                "s3 error: " + ex.getMessage()
-            );
-            default -> new S3UploadError(
-                "unexpected error: " + e.getMessage()
-            );
-        };
+            return s3Client.putObject(request, RequestBody.fromBytes(content));
+        });
     }
 }

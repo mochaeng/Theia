@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import com.mochaeng.theia_api.ingestion.application.web.UploadDocumentResponse;
-import com.mochaeng.theia_api.shared.application.dto.IncomingDocumentMessage;
+import com.mochaeng.theia_api.shared.application.dto.DocumentMessage;
 import com.mochaeng.theia_api.shared.infrastructure.jpa.JpaDocumentRepository;
 import com.mochaeng.theia_api.shared.infrastructure.jpa.JpaFieldRepository;
 import java.io.IOException;
@@ -105,7 +105,7 @@ public class DocumentUploadAndProcessingIntegrationTest {
     @Container
     static OllamaContainer ollama = new OllamaContainer("ollama/ollama:0.11.8");
 
-    private Consumer<String, IncomingDocumentMessage> kafkaConsumer;
+    private Consumer<String, DocumentMessage> kafkaConsumer;
 
     @Test
     void shouldProcessDocumentEndToEnd() throws Exception {
@@ -289,7 +289,7 @@ public class DocumentUploadAndProcessingIntegrationTest {
         consumerProps.put(JsonDeserializer.TRUSTED_PACKAGES, "*");
         consumerProps.put(
             JsonDeserializer.VALUE_DEFAULT_TYPE,
-            IncomingDocumentMessage.class
+            DocumentMessage.class
         );
         consumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         consumerProps.put(
@@ -299,15 +299,13 @@ public class DocumentUploadAndProcessingIntegrationTest {
 
         var consumerFactory = new DefaultKafkaConsumerFactory<
             String,
-            IncomingDocumentMessage
+            DocumentMessage
         >(consumerProps);
         kafkaConsumer = consumerFactory.createConsumer();
         kafkaConsumer.subscribe(List.of(documentUploadedTopic));
     }
 
-    private Optional<IncomingDocumentMessage> waitForKafkaEvent(
-        UUID documentID
-    ) {
+    private Optional<DocumentMessage> waitForKafkaEvent(UUID documentID) {
         try {
             return await()
                 .atMost(15, TimeUnit.SECONDS)
@@ -329,7 +327,7 @@ public class DocumentUploadAndProcessingIntegrationTest {
         }
     }
 
-    private Optional<IncomingDocumentMessage> pollForDocument(UUID documentID) {
+    private Optional<DocumentMessage> pollForDocument(UUID documentID) {
         try {
             var records = kafkaConsumer.poll(Duration.ofMillis(100));
 

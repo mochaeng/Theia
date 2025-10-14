@@ -4,7 +4,7 @@ import com.mochaeng.theia_api.notification.domain.DocumentProgressEvent;
 import com.mochaeng.theia_api.processing.application.port.in.ProcessDocumentUseCase;
 import com.mochaeng.theia_api.processing.application.port.out.*;
 import com.mochaeng.theia_api.processing.domain.model.ProcessedDocument;
-import com.mochaeng.theia_api.shared.application.dto.IncomingDocumentMessage;
+import com.mochaeng.theia_api.shared.application.dto.DocumentMessage;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,39 +15,35 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class ProcessDocumentService implements ProcessDocumentUseCase {
 
-    private final DownloadDocumentPort downloader;
+    private final FileStorage downloader;
     private final ExtractDocumentDataPort extractor;
     private final GenerateDocumentEmbeddingsPort embedding;
     private final DocumentPersistencePort documentPersistence;
     private final PublishProgressDocumentEventPort publisher;
 
     @Override
-    public void process(IncomingDocumentMessage message) {
-        log.info("processing uploaded document message event: {}", message);
+    public void process(DocumentMessage message) {
+        log.info("processing valid-document '{}'", message.documentID());
 
-        publisher.publish(
-            DocumentProgressEvent.now(
-                message.documentID(),
-                DocumentProgressEvent.Status.DOWNLOADING
-            )
+        transitionTo(
+            message.documentID(),
+            DocumentProgressEvent.Status.DOWNLOADING
         );
 
         var downloadResult = downloader.download(message);
-        if (!downloadResult.isSuccess()) {
+        if (downloadResult.isLeft()) {
             publishFailedEvent(message.documentID());
             return;
         }
 
-        publisher.publish(
-            DocumentProgressEvent.now(
-                message.documentID(),
-                DocumentProgressEvent.Status.EXTRACTING
-            )
+        transitionTo(
+            message.documentID(),
+            DocumentProgressEvent.Status.EXTRACTING
         );
 
         var metadataResult = extractor.extract(
             message.documentID(),
-            downloadResult.content()
+            downloadResult.get().content()
         );
         if (!metadataResult.isSuccess()) {
             log.info("extraction failed: {}", metadataResult.errorMessage());
@@ -55,22 +51,20 @@ public class ProcessDocumentService implements ProcessDocumentUseCase {
             return;
         }
         log.info(
-            "metadata extracted for document with id [{}]: {}",
+            "metadata extracted for '{}': {}",
             message.documentID(),
             metadataResult.metadata()
         );
 
-        publisher.publish(
-            DocumentProgressEvent.now(
-                message.documentID(),
-                DocumentProgressEvent.Status.EMBEDDING
-            )
+        transitionTo(
+            message.documentID(),
+            DocumentProgressEvent.Status.EMBEDDING
         );
 
         var embeddings = embedding.generate(metadataResult.metadata());
         if (embeddings.isLeft()) {
             log.info(
-                "failed to generate embeddings for [{}]",
+                "embedding generation failed for '{}'",
                 message.documentID()
             );
             publishFailedEvent(message.documentID());
@@ -79,21 +73,16 @@ public class ProcessDocumentService implements ProcessDocumentUseCase {
 
         log.info("embeddings generated successfully");
 
-        publisher.publish(
-            DocumentProgressEvent.now(
-                message.documentID(),
-                DocumentProgressEvent.Status.SAVING
-            )
-        );
+        transitionTo(message.documentID(), DocumentProgressEvent.Status.SAVING);
 
+        var filePath = "%s/%s".formatted(message.bucket(), message.key());
         var processedDocument = ProcessedDocument.from(
             metadataResult.metadata(),
-            downloadResult.hash(),
-            //            message.bucketPath(),
-            "",
+            downloadResult.get().hash(),
+            filePath,
             embeddings.get()
         );
-        log.info("document to be saved: {}", processedDocument);
+        log.info("document '{}' saved", processedDocument);
         var persistenceResult = documentPersistence.save(processedDocument);
         if (!persistenceResult.isSuccess()) {
             log.info(
@@ -104,24 +93,25 @@ public class ProcessDocumentService implements ProcessDocumentUseCase {
             return;
         }
         log.info(
-            "document with id [{}] was persisted successfully",
+            "document '{}' was persisted successfully",
             processedDocument.id()
         );
 
-        publisher.publish(
-            DocumentProgressEvent.now(
-                message.documentID(),
-                DocumentProgressEvent.Status.COMPLETED
-            )
+        transitionTo(
+            message.documentID(),
+            DocumentProgressEvent.Status.COMPLETED
         );
     }
 
+    private void transitionTo(
+        UUID documentID,
+        DocumentProgressEvent.Status status
+    ) {
+        log.info("document '{}' transitioning to '{}'", documentID, status);
+        publisher.publish(DocumentProgressEvent.now(documentID, status));
+    }
+
     private void publishFailedEvent(UUID documentID) {
-        publisher.publish(
-            DocumentProgressEvent.now(
-                documentID,
-                DocumentProgressEvent.Status.FAILED
-            )
-        );
+        transitionTo(documentID, DocumentProgressEvent.Status.FAILED);
     }
 }

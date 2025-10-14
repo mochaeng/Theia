@@ -1,12 +1,10 @@
 package com.mochaeng.theia_api.validator.application.port.out;
 
-import com.mochaeng.theia_api.shared.application.dto.ValidatedDocumentMessage;
-import io.vavr.control.Either;
+import com.mochaeng.theia_api.shared.application.dto.DocumentMessage;
+import io.vavr.control.Option;
 
 public interface PublishValidatedDocumentPort {
-    Either<PublishValidatedDocumentError, Void> publish(
-        ValidatedDocumentMessage message
-    );
+    Option<PublishValidatedDocumentError> publish(DocumentMessage message);
 
     record PublishValidatedDocumentError(String message) {}
 }

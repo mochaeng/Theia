@@ -3,8 +3,10 @@ package com.mochaeng.theia_api.shared.application.dto;
 import com.mochaeng.theia_api.ingestion.domain.model.Document;
 import java.time.Instant;
 import java.util.UUID;
+import lombok.Builder;
 
-public record IncomingDocumentMessage(
+@Builder(toBuilder = true)
+public record DocumentMessage(
     UUID documentID,
     String userID,
     String bucket,
@@ -13,12 +15,12 @@ public record IncomingDocumentMessage(
     long fileSizeBytes,
     Instant uploadedAt
 ) {
-    public static IncomingDocumentMessage create(
+    public static DocumentMessage create(
         Document document,
         String bucket,
         String key
     ) {
-        return new IncomingDocumentMessage(
+        return new DocumentMessage(
             document.id(),
             document.userID(),
             bucket,

@@ -5,7 +5,7 @@ import com.mochaeng.theia_api.ingestion.application.port.in.UploadIncomingDocume
 import com.mochaeng.theia_api.ingestion.application.port.out.FileStoragePort;
 import com.mochaeng.theia_api.ingestion.application.port.out.PublishIncomingDocumentPort;
 import com.mochaeng.theia_api.ingestion.domain.model.Document;
-import com.mochaeng.theia_api.shared.application.dto.IncomingDocumentMessage;
+import com.mochaeng.theia_api.shared.application.dto.DocumentMessage;
 import io.vavr.control.Either;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,13 +26,11 @@ public class UploadIncomingDocumentService
     private final PublishIncomingDocumentPort publisher;
 
     @Override
-    public Either<UploadIncomingDocumentError, IncomingDocumentMessage> upload(
-        Document document
-    ) {
+    public Either<UploadError, DocumentMessage> upload(Document document) {
         var validate = validator.validate(document);
         if (validate.isLeft()) {
             return Either.left(
-                new UploadIncomingDocumentError(
+                new UploadError(
                     "failed to validate document: " + validate.getLeft()
                 )
             );
@@ -45,13 +43,13 @@ public class UploadIncomingDocumentService
         );
         if (filePath.isLeft()) {
             return Either.left(
-                new UploadIncomingDocumentError(
+                new UploadError(
                     "failed to store document: " + filePath.getLeft().message()
                 )
             );
         }
 
-        var event = IncomingDocumentMessage.create(
+        var event = DocumentMessage.create(
             document,
             incomingBucket,
             filePath.get()
@@ -59,7 +57,7 @@ public class UploadIncomingDocumentService
         var publishResult = publisher.publishSync(event);
         if (publishResult.isLeft()) {
             return Either.left(
-                new UploadIncomingDocumentError(
+                new UploadError(
                     "failed to publish event: " +
                     publishResult.getLeft().message()
                 )

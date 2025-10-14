@@ -1,7 +1,7 @@
 package com.mochaeng.theia_api.ingestion.infrastructure.adapter.kafka;
 
 import com.mochaeng.theia_api.ingestion.application.port.out.PublishIncomingDocumentPort;
-import com.mochaeng.theia_api.shared.application.dto.IncomingDocumentMessage;
+import com.mochaeng.theia_api.shared.application.dto.DocumentMessage;
 import io.vavr.control.Either;
 import io.vavr.control.Try;
 import java.util.concurrent.TimeUnit;
@@ -40,7 +40,7 @@ public class KafkaPublishIncomingDocumentEvent
 
     @Override
     public Either<PublishUploadedDocumentError, Void> publishAsync(
-        IncomingDocumentMessage message
+        DocumentMessage message
     ) {
         var key = message.documentID().toString();
 
@@ -79,7 +79,7 @@ public class KafkaPublishIncomingDocumentEvent
 
     @Override
     public Either<PublishUploadedDocumentError, Void> publishSync(
-        IncomingDocumentMessage message
+        DocumentMessage message
     ) {
         var key = message.documentID().toString();
 

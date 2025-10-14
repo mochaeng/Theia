@@ -1,14 +1,15 @@
 package com.mochaeng.theia_api.validator.application.service;
 
-import com.mochaeng.theia_api.shared.application.dto.IncomingDocumentMessage;
-import com.mochaeng.theia_api.shared.application.dto.ValidatedDocumentMessage;
+import com.mochaeng.theia_api.shared.application.dto.DocumentMessage;
 import com.mochaeng.theia_api.validator.application.port.in.VerifyDocumentUseCase;
 import com.mochaeng.theia_api.validator.application.port.out.*;
-import io.vavr.control.Either;
+import io.vavr.control.Option;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class VerifyDocumentService implements VerifyDocumentUseCase {
@@ -22,96 +23,80 @@ public class VerifyDocumentService implements VerifyDocumentUseCase {
     private final PublishValidatedDocumentPort publisher;
 
     @Override
-    public Either<VerifyDocumentError, Void> verify(
-        IncomingDocumentMessage incomingMessage
-    ) {
-        // 1. download file from s3
-        // 2. validate structure
-        // 3. check for virus
-        // 4. upload to validated bucket
-        // 5. publish event
-
-        var documentBytes = storager.download(
-            incomingMessage.bucket(),
-            incomingMessage.key()
-        );
+    public Option<VerifyDocumentError> verify(DocumentMessage message) {
+        log.info("downloading incoming-document '{}'", message.key());
+        var documentBytes = storager.download(message.bucket(), message.key());
         if (documentBytes.isLeft()) {
-            return Either.left(
-                new VerifyDocumentError(
-                    "failed to download document from bucket: " +
-                    documentBytes.getLeft().message()
-                )
+            return error(
+                "download of incoming-document failed: '%s'" +
+                documentBytes.getLeft().message()
             );
         }
 
+        log.info(
+            "checking incoming-document '{}' file structure",
+            message.key()
+        );
         var validateStructure = validator.validate(documentBytes.get());
         if (!validateStructure.isEmpty()) {
-            return Either.left(
-                new VerifyDocumentError(
-                    "failed to validate document structure: " +
-                    validateStructure.get().message()
-                )
+            return error(
+                "incoming-document have invalid structure: " +
+                validateStructure.get().message()
             );
         }
 
+        log.info("checking incoming-document '{}' for virus", message.key());
         var checkVirus = scanner.scan(documentBytes.get());
         if (checkVirus.isLeft()) {
-            return Either.left(
-                new VerifyDocumentError(
-                    "failed to check document '%s' for virus: %s".formatted(
-                        incomingMessage.documentID(),
-                        checkVirus.getLeft().message()
-                    )
-                )
+            return error(
+                "virus check failed: %s" + checkVirus.getLeft().message()
             );
         }
 
         var virusSignature = checkVirus.get().signature();
         if (!virusSignature.isEmpty()) {
-            return Either.left(
-                new VerifyDocumentError(
-                    "failed to validate document: '%s' contains virus with signature '%s'".formatted(
-                        incomingMessage.documentID(),
-                        virusSignature
-                    )
+            return error(
+                "incoming-document contains virus with signature '%s'".formatted(
+                    virusSignature.get()
                 )
             );
         }
 
-        var bucketPath = storager.upload(
-            validatedBucketName,
-            incomingMessage.documentID().toString(),
-            incomingMessage.contentType(),
+        var validatedMessage = message
+            .toBuilder()
+            .bucket(validatedBucketName)
+            .key(message.documentID().toString())
+            .build();
+
+        log.info(
+            "uploading incoming-document '{}' to safer bucket",
+            message.key()
+        );
+        var bucketPath = storager.uploadValidDocument(
+            validatedMessage,
             documentBytes.get()
         );
-        if (bucketPath.isLeft()) {
-            return Either.left(
-                new VerifyDocumentError(
-                    "failed to upload document to bucket path '%s': %s".formatted(
-                        incomingMessage.bucket(),
-                        bucketPath.getLeft().message()
-                    )
+        if (!bucketPath.isEmpty()) {
+            return error(
+                "upload to bucket path '%s' failed: %s".formatted(
+                    message.bucket(),
+                    bucketPath.get().message()
                 )
             );
         }
 
-        var validatedMessage = ValidatedDocumentMessage.from(
-            "",
-            "",
-            incomingMessage
-        );
         var publishDocument = publisher.publish(validatedMessage);
-        if (publishDocument.isLeft()) {
-            return Either.left(
-                new VerifyDocumentError(
-                    "failed to publish document '%s' message: %s".formatted(
-                        incomingMessage.documentID(),
-                        publishDocument.getLeft().message()
-                    )
-                )
+        if (!publishDocument.isEmpty()) {
+            return error(
+                "validated-document publish message failed: %s" +
+                publishDocument.get().message()
             );
         }
 
-        return Either.right(null);
+        return Option.none();
+    }
+
+    private Option<VerifyDocumentError> error(String msg) {
+        return Option.some(new VerifyDocumentError(msg));
     }
 }

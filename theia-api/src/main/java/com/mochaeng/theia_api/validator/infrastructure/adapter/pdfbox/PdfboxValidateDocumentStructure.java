@@ -5,12 +5,14 @@ import io.vavr.control.Option;
 import io.vavr.control.Try;
 import java.util.Objects;
 import java.util.stream.Stream;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDDocumentCatalog;
 import org.apache.pdfbox.pdmodel.interactive.action.*;
 import org.springframework.stereotype.Component;
 
+@Slf4j
 @Component
 public class PdfboxValidateDocumentStructure
     implements ValidateDocumentStructurePort {

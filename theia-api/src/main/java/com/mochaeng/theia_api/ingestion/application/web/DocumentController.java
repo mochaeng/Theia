@@ -2,7 +2,7 @@ package com.mochaeng.theia_api.ingestion.application.web;
 
 import com.mochaeng.theia_api.ingestion.application.port.in.UploadIncomingDocumentUseCase;
 import com.mochaeng.theia_api.ingestion.domain.model.Document;
-import com.mochaeng.theia_api.shared.application.dto.IncomingDocumentMessage;
+import com.mochaeng.theia_api.shared.application.dto.DocumentMessage;
 import com.mochaeng.theia_api.shared.dto.ErrorResponse;
 import java.io.IOException;
 import lombok.RequiredArgsConstructor;
@@ -58,7 +58,7 @@ public class DocumentController {
     }
 
     private ResponseEntity<UploadDocumentResponse> mapResponse(
-        IncomingDocumentMessage msg
+        DocumentMessage msg
     ) {
         return ResponseEntity.ok(
             new UploadDocumentResponse(msg.documentID().toString())
@@ -66,7 +66,7 @@ public class DocumentController {
     }
 
     private ResponseEntity<ErrorResponse> mapError(
-        UploadIncomingDocumentUseCase.UploadIncomingDocumentError error
+        UploadIncomingDocumentUseCase.UploadError error
     ) {
         return ResponseEntity.badRequest().body(
             new ErrorResponse("Invalid file type", "/v1/upload-document")

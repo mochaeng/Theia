@@ -37,12 +37,12 @@ public class ClamavVirusScanner implements VirusScannerPort {
             var out = new DataOutputStream(socket.getOutputStream());
             var in = new BufferedInputStream(socket.getInputStream())
         ) {
-            var eicar =
-                "X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*".getBytes(
-                    StandardCharsets.UTF_8
-                );
+            //            var eicar =
+            //                "X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*".getBytes(
+            //                    StandardCharsets.UTF_8
+            //                );
 
-            var err = streamFile(out, eicar);
+            var err = streamFile(out, content);
             if (!err.isEmpty()) {
                 return Either.left(
                     new ScanError("failed to stream file: " + err.get())

@@ -13,7 +13,7 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
-@Component("s3FileStorage")
+@Component("s3FileStorageIngestion")
 @RequiredArgsConstructor
 @Slf4j
 public class S3FileStorage implements FileStoragePort {
@@ -29,20 +29,13 @@ public class S3FileStorage implements FileStoragePort {
         return Try.of(() -> {
             log.info("storing document '{}'", document);
 
-            //            var key = document.filename();
-
             var request = PutObjectRequest.builder()
                 .bucket(bucket)
                 .key(key)
                 .contentType(document.contentType())
                 .build();
 
-            s3.putObject(
-                request,
-                RequestBody.fromBytes(
-                    document.content()
-                )
-            );
+            s3.putObject(request, RequestBody.fromBytes(document.content()));
 
             return key;
         })
