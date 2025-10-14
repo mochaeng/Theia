@@ -61,7 +61,10 @@ public class ProcessDocumentService implements ProcessDocumentUseCase {
             DocumentProgressEvent.Status.EMBEDDING
         );
 
-        var embeddings = embedding.generate(metadataResult.metadata());
+        var embeddings = embedding.generate(
+            message.documentID(),
+            metadataResult.metadata()
+        );
         if (embeddings.isLeft()) {
             log.info(
                 "embedding generation failed for '{}'",
@@ -77,6 +80,7 @@ public class ProcessDocumentService implements ProcessDocumentUseCase {
 
         var filePath = "%s/%s".formatted(message.bucket(), message.key());
         var processedDocument = ProcessedDocument.from(
+            message.documentID(),
             metadataResult.metadata(),
             downloadResult.get().hash(),
             filePath,

@@ -7,7 +7,7 @@ import lombok.Builder;
 
 @Builder
 public record DocumentMetadata(
-    UUID documentId,
+    //    UUID documentId,
     String title,
     String abstractText,
     List<Author> authors,

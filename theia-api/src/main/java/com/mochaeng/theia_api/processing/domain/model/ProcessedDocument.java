@@ -30,13 +30,15 @@ public record ProcessedDocument(
     }
 
     public static ProcessedDocument from(
+        UUID documentID,
         DocumentMetadata metadata,
         byte[] fileHash,
         String filePath,
         DocumentEmbeddings embeddings
     ) {
         return ProcessedDocument.builder()
-            .id(metadata.documentId())
+            //            .id(metadata.documentId())
+            .id(documentID)
             .fileHash(fileHash)
             .filePath(filePath)
             .fieldEmbeddings(embeddings.fieldEmbeddings())

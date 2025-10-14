@@ -3,6 +3,7 @@ package com.mochaeng.theia_api.processing.infrastructure.adapter.grobid;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.mochaeng.theia_api.processing.application.dto.ExtractDocumentResult;
 import com.mochaeng.theia_api.processing.application.port.out.ExtractDocumentDataPort;
+import com.mochaeng.theia_api.processing.application.port.out.ParseGrobidResponsePort;
 import com.mochaeng.theia_api.processing.domain.model.DocumentMetadata;
 import com.mochaeng.theia_api.processing.infrastructure.adapter.grobid.exception.GrobidException;
 import com.mochaeng.theia_api.processing.infrastructure.adapter.grobid.exception.GrobidParsingException;
@@ -34,8 +35,10 @@ public class GrobidExtractDocumentData implements ExtractDocumentDataPort {
     @Qualifier("grobidRetryTemplate")
     private final RetryTemplate retryTemplate;
 
-    @Qualifier("grobidXmlMapper")
-    private final XmlMapper xmlMapper;
+    //    @Qualifier("grobidXmlMapper")
+    //    private final XmlMapper xmlMapper;
+
+    private final ParseGrobidResponsePort parseGrobidResponse;
 
     private final GrobidProperties grobidProperties;
 
@@ -51,14 +54,23 @@ public class GrobidExtractDocumentData implements ExtractDocumentDataPort {
 
         try {
             var teiXml = callGrobidWithRetry(documentID, documentBytes);
-            var grobidData = parseTeiResponse(teiXml);
-            var metadata = createMetadata(documentID, grobidData);
+
+            var metadata = parseGrobidResponse.parse(teiXml);
+            if (metadata.isEmpty()) {
+                return ExtractDocumentResult.failure(
+                    "",
+                    "metadata extraction failed"
+                );
+            }
+
+            //            var grobidData = parseTeiResponse(teiXml);
+            //            var metadata = createMetadata(documentID, grobidData);
 
             log.info(
                 "successfully extracted metadata for document with id [{}]",
                 documentID
             );
-            return ExtractDocumentResult.success(metadata);
+            return ExtractDocumentResult.success(metadata.get());
         } catch (GrobidUnavailableException e) {
             log.error("grobid is unavailable: {}", e.getMessage());
             return ExtractDocumentResult.failure(
@@ -183,22 +195,22 @@ public class GrobidExtractDocumentData implements ExtractDocumentDataPort {
         }
     }
 
-    private GrobidData parseTeiResponse(String teiXml) {
-        try {
-            log.debug("parsing tei xml response: {}", teiXml);
-
-            return xmlMapper.readValue(teiXml, GrobidData.class);
-        } catch (Exception e) {
-            log.error(
-                "failed to parse grobid tei xml response: {}",
-                e.getMessage()
-            );
-            throw new GrobidParsingException(
-                "Failed to parse Grobid TEI XML response",
-                e
-            );
-        }
-    }
+    //    private GrobidData parseTeiResponse(String teiXml) {
+    //        try {
+    //            log.debug("parsing tei xml response: {}", teiXml);
+    //
+    //            return xmlMapper.readValue(teiXml, GrobidData.class);
+    //        } catch (Exception e) {
+    //            log.error(
+    //                "failed to parse grobid tei xml response: {}",
+    //                e.getMessage()
+    //            );
+    //            throw new GrobidParsingException(
+    //                "Failed to parse Grobid TEI XML response",
+    //                e
+    //            );
+    //        }
+    //    }
 
     private DocumentMetadata createMetadata(
         UUID documentId,
@@ -210,8 +222,12 @@ public class GrobidExtractDocumentData implements ExtractDocumentDataPort {
             .getTitleStmt()
             .getTitle();
 
+        //        var abstract_ = grobidData
+        //            .getTeiHeader()
+        //            .getFileDesc()
+
         return DocumentMetadata.builder()
-            .documentId(documentId)
+            //            .documentId(documentId)
             .title(title)
             .authors(new ArrayList<>())
             .abstractText(null)

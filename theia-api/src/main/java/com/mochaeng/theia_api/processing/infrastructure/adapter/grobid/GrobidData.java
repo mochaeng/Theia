@@ -1,9 +1,11 @@
 package com.mochaeng.theia_api.processing.infrastructure.adapter.grobid;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement;
 import com.mochaeng.theia_api.processing.infrastructure.constants.TeiNamespaces;
+import java.util.List;
 import lombok.Data;
 
 @Data
@@ -58,5 +60,49 @@ public class GrobidData {
 
     @Data
     @JsonIgnoreProperties(ignoreUnknown = true)
-    public static class ProfileDesc {}
+    public static class ProfileDesc {
+
+        @JacksonXmlProperty(
+            localName = "textClass",
+            namespace = TeiNamespaces.TEI_NS
+        )
+        private TextClass textClass;
+
+        @JacksonXmlProperty(
+            localName = "abstract",
+            namespace = TeiNamespaces.TEI_NS
+        )
+        private Abstract abstract_;
+    }
+
+    @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class TextClass {
+
+        @JacksonXmlProperty(
+            localName = "keywords",
+            namespace = TeiNamespaces.TEI_NS
+        )
+        private Keywords keywords;
+    }
+
+    @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class Keywords {
+
+        @JacksonXmlElementWrapper(useWrapping = false)
+        @JacksonXmlProperty(
+            localName = "term",
+            namespace = TeiNamespaces.TEI_NS
+        )
+        private List<String> terms;
+    }
+
+    @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class Abstract {
+
+        @JacksonXmlProperty(localName = "p", namespace = TeiNamespaces.TEI_NS)
+        private String p;
+    }
 }

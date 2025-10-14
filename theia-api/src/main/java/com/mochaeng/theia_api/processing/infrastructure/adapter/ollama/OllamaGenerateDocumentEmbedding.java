@@ -14,6 +14,7 @@ import io.vavr.control.Either;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -29,12 +30,10 @@ public class OllamaGenerateDocumentEmbedding
 
     @Override
     public Either<EmbeddingError, DocumentEmbeddings> generate(
+        UUID documentID,
         DocumentMetadata metadata
     ) {
-        log.info(
-            "generating embeddings for document with id [{}]",
-            metadata.documentId()
-        );
+        log.info("generating embeddings for '{}'", documentID);
 
         var fieldTexts = DocumentFieldBuilder.buildFieldTexts(metadata);
         var fieldEmbeddings = new ArrayList<FieldEmbedding>();
@@ -72,14 +71,12 @@ public class OllamaGenerateDocumentEmbedding
         }
 
         var documentEmbeddings = DocumentEmbeddings.builder()
-            .documentId(metadata.documentId())
+            //            .documentId(metadata.documentId())
+            .documentId(documentID)
             .fieldEmbeddings(fieldEmbeddings)
             .build();
 
-        log.info(
-            "successfully generated embeddings for document with id [{}]",
-            metadata.documentId()
-        );
+        log.info("successfully generated embeddings for '{}'", documentID);
 
         return Either.right(documentEmbeddings);
     }
