@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 @Component
 @RequiredArgsConstructor
@@ -26,9 +27,13 @@ public class AuthorPersistenceService {
     }
 
     private AuthorEntity findOrCreateAuthor(Author author) {
-        return authorRepository
-            .findByEmail(author.email())
-            .orElseGet(() -> createNewAuthor(author));
+        if (StringUtils.hasText(author.email())) {
+            return authorRepository
+                .findByEmail(author.email())
+                .orElseGet(() -> createNewAuthor(author));
+        }
+
+        return createNewAuthor(author);
     }
 
     private AuthorEntity createNewAuthor(Author author) {

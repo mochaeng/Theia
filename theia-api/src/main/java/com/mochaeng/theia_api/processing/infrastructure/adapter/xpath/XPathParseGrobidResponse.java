@@ -183,27 +183,4 @@ public class XPathParseGrobidResponse implements ParseGrobidResponsePort {
             return Collections.emptyIterator();
         }
     }
-
-    //    private DocumentMetadata createMetadata(
-    //        UUID documentId,
-    //        GrobidData grobidData
-    //    ) {
-    //        var title = grobidData
-    //            .getTeiHeader()
-    //            .getFileDesc()
-    //            .getTitleStmt()
-    //            .getTitle();
-    //
-    //        //        var abstract_ = grobidData
-    //        //            .getTeiHeader()
-    //        //            .getFileDesc()
-    //
-    //        return DocumentMetadata.builder()
-    //            //            .documentId(documentId
-    //            .title(title)
-    //            .authors(new ArrayList<>())
-    //            .abstractText(null)
-    //            .additionalMetadata(Map.of("processEngine", "GROBID"))
-    //            .build();
-    //    }
 }
