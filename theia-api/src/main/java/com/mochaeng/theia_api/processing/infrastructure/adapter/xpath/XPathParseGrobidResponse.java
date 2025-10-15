@@ -3,6 +3,8 @@ package com.mochaeng.theia_api.processing.infrastructure.adapter.xpath;
 import com.mochaeng.theia_api.processing.application.port.out.ParseGrobidResponsePort;
 import com.mochaeng.theia_api.processing.domain.model.Author;
 import com.mochaeng.theia_api.processing.domain.model.DocumentMetadata;
+import com.mochaeng.theia_api.processing.domain.model.Keyword;
+import com.mochaeng.theia_api.processing.infrastructure.adapter.grobid.GrobidConstants;
 import com.mochaeng.theia_api.processing.infrastructure.adapter.grobid.GrobidData;
 import com.mochaeng.theia_api.processing.infrastructure.constants.TeiNamespaces;
 import io.vavr.control.Option;
@@ -11,6 +13,9 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
+import javax.xml.namespace.QName;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.xpath.XPath;
@@ -37,10 +42,14 @@ public class XPathParseGrobidResponse implements ParseGrobidResponsePort {
 
             var title = extractTitle(xpath, document);
             var abstractText = extractAbstract(xpath, document);
+            var authors = extractAuthors(xpath, document);
+            var keywords = extractKeywords(xpath, document);
 
             return DocumentMetadata.builder()
                 .title(title)
                 .abstractText(abstractText)
+                .authors(authors)
+                .keywords(keywords)
                 .build();
         }).toOption();
     }
@@ -64,30 +73,64 @@ public class XPathParseGrobidResponse implements ParseGrobidResponsePort {
 
     private String extractTitle(XPath xpath, Document document) {
         return Try.of(() ->
-            xpath.evaluate(
-                "/tei:TEI/tei:teiHeader/tei:fileDesc/tei:titleStmt/tei:title[@level='a'][@type='main']",
-                document
-            )
+            xpath.evaluate(GrobidConstants.TITLE, document)
         ).getOrNull();
     }
 
     private String extractAbstract(XPath xpath, Document document) {
         return Try.of(() ->
-            xpath.evaluate(
-                "/tei:TEI/tei:teiHeader/tei:profileDesc/tei:abstract/tei:p",
-                document
-            )
+            xpath.evaluate(GrobidConstants.ABSTRACT, document)
         ).getOrNull();
+    }
+
+    private List<Author> extractAuthors(XPath xpath, Document document) {
+        var authorNodes = evaluateXPath(
+            xpath,
+            GrobidConstants.AUTHORS,
+            document,
+            XPathConstants.NODESET
+        );
+
+        return authorNodes
+            .map(this::nodeListToStream)
+            .map(stream ->
+                stream
+                    .map(node -> extractAuthorFromNode(xpath, node))
+                    .filter(Option::isDefined)
+                    .map(Option::get)
+                    .toList()
+            )
+            .getOrElse(Collections::emptyList);
+    }
+
+    private List<Keyword> extractKeywords(XPath xpath, Document document) {
+        var keywordNodes = evaluateXPath(
+            xpath,
+            GrobidConstants.KEYWORDS,
+            document,
+            XPathConstants.NODESET
+        );
+
+        return nodeListToStream(keywordNodes.get())
+            .map(this::extractKeywordFromNode)
+            .filter(keyword -> !keyword.isEmpty())
+            .toList();
+    }
+
+    private Keyword extractKeywordFromNode(Node keywordNode) {
+        return Try.of(keywordNode::getTextContent)
+            .map(Keyword::new)
+            .getOrElse(Keyword::empty);
     }
 
     private Option<Author> extractAuthorFromNode(XPath xpath, Node authorNode) {
         var firstName = evaluateXPath(
             xpath,
-            "tei:persName/tei:forename[@type='first']",
+            GrobidConstants.FORENAME,
             authorNode
         );
 
-        if (Objects.equals(firstName, "")) {
+        if (firstName == null) {
             return Option.none();
         }
 
@@ -95,7 +138,22 @@ public class XPathParseGrobidResponse implements ParseGrobidResponsePort {
     }
 
     private String evaluateXPath(XPath xpath, String expression, Node context) {
-        return Try.of(() -> xpath.evaluate(expression, context)).getOrElse("");
+        return Try.of(() -> xpath.evaluate(expression, context)).getOrNull();
+    }
+
+    private Option<NodeList> evaluateXPath(
+        XPath xpath,
+        String expression,
+        Document document,
+        QName constants
+    ) {
+        return Try.of(() ->
+            (NodeList) xpath.evaluate(expression, document, constants)
+        ).toOption();
+    }
+
+    private Stream<Node> nodeListToStream(NodeList nodes) {
+        return IntStream.range(0, nodes.getLength()).mapToObj(nodes::item);
     }
 
     private static class TeiNamespaceContext
@@ -126,26 +184,26 @@ public class XPathParseGrobidResponse implements ParseGrobidResponsePort {
         }
     }
 
-    private DocumentMetadata createMetadata(
-        UUID documentId,
-        GrobidData grobidData
-    ) {
-        var title = grobidData
-            .getTeiHeader()
-            .getFileDesc()
-            .getTitleStmt()
-            .getTitle();
-
-        //        var abstract_ = grobidData
-        //            .getTeiHeader()
-        //            .getFileDesc()
-
-        return DocumentMetadata.builder()
-            //            .documentId(documentId
-            .title(title)
-            .authors(new ArrayList<>())
-            .abstractText(null)
-            .additionalMetadata(Map.of("processEngine", "GROBID"))
-            .build();
-    }
+    //    private DocumentMetadata createMetadata(
+    //        UUID documentId,
+    //        GrobidData grobidData
+    //    ) {
+    //        var title = grobidData
+    //            .getTeiHeader()
+    //            .getFileDesc()
+    //            .getTitleStmt()
+    //            .getTitle();
+    //
+    //        //        var abstract_ = grobidData
+    //        //            .getTeiHeader()
+    //        //            .getFileDesc()
+    //
+    //        return DocumentMetadata.builder()
+    //            //            .documentId(documentId
+    //            .title(title)
+    //            .authors(new ArrayList<>())
+    //            .abstractText(null)
+    //            .additionalMetadata(Map.of("processEngine", "GROBID"))
+    //            .build();
+    //    }
 }

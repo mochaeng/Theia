@@ -63,11 +63,9 @@ public class GrobidExtractDocumentData implements ExtractDocumentDataPort {
                 );
             }
 
-            //            var grobidData = parseTeiResponse(teiXml);
-            //            var metadata = createMetadata(documentID, grobidData);
-
             log.info(
-                "successfully extracted metadata for document with id [{}]",
+                "successfully extracted metadata '{}' for document with id [{}]",
+                metadata.get(),
                 documentID
             );
             return ExtractDocumentResult.success(metadata.get());
