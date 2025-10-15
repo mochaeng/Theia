@@ -5,7 +5,6 @@ import com.mochaeng.theia_api.processing.domain.model.Author;
 import com.mochaeng.theia_api.processing.domain.model.DocumentMetadata;
 import com.mochaeng.theia_api.processing.domain.model.Keyword;
 import com.mochaeng.theia_api.processing.infrastructure.adapter.grobid.GrobidConstants;
-import com.mochaeng.theia_api.processing.infrastructure.adapter.grobid.GrobidData;
 import com.mochaeng.theia_api.processing.infrastructure.constants.TeiNamespaces;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
@@ -86,7 +85,7 @@ public class XPathParseGrobidResponse implements ParseGrobidResponsePort {
     private List<Author> extractAuthors(XPath xpath, Document document) {
         var authorNodes = evaluateXPath(
             xpath,
-            GrobidConstants.AUTHORS,
+            GrobidConstants.Author.NODES,
             document,
             XPathConstants.NODESET
         );
@@ -126,19 +125,37 @@ public class XPathParseGrobidResponse implements ParseGrobidResponsePort {
     private Option<Author> extractAuthorFromNode(XPath xpath, Node authorNode) {
         var firstName = evaluateXPath(
             xpath,
-            GrobidConstants.FORENAME,
+            GrobidConstants.Author.FORENAME,
             authorNode
         );
 
-        if (firstName == null) {
+        var lastName = evaluateXPath(
+            xpath,
+            GrobidConstants.Author.SURNAME,
+            authorNode
+        );
+
+        var email = evaluateXPath(
+            xpath,
+            GrobidConstants.Author.EMAIL,
+            authorNode
+        );
+
+        if (firstName == null && lastName == null) {
             return Option.none();
         }
 
-        return Option.of(Author.builder().firstName(firstName).build());
+        return Option.of(
+            Author.builder()
+                .firstName(firstName)
+                .lastName(lastName)
+                .email(email)
+                .build()
+        );
     }
 
     private String evaluateXPath(XPath xpath, String expression, Node context) {
-        return Try.of(() -> xpath.evaluate(expression, context)).getOrNull();
+        return Try.of(() -> xpath.evaluate(expression, context).trim()).getOrNull();
     }
 
     private Option<NodeList> evaluateXPath(
