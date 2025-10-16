@@ -16,8 +16,7 @@ public class GrobidConstants {
         public static final String FORENAME =
             "tei:persName/tei:forename[@type='first']";
 
-        public static final String SURNAME =
-            "tei:persName/tei:surname";
+        public static final String SURNAME = "tei:persName/tei:surname";
 
         public static final String EMAIL = "tei:email";
     }
