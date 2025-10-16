@@ -35,9 +35,6 @@ public class GrobidExtractDocumentData implements ExtractDocumentDataPort {
     @Qualifier("grobidRetryTemplate")
     private final RetryTemplate retryTemplate;
 
-    //    @Qualifier("grobidXmlMapper")
-    //    private final XmlMapper xmlMapper;
-
     private final ParseGrobidResponsePort parseGrobidResponse;
 
     private final GrobidProperties grobidProperties;

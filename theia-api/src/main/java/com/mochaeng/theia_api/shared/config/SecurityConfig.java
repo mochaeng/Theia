@@ -1,4 +1,4 @@
-package com.mochaeng.theia_api.ingestion.infrastructure.config;
+package com.mochaeng.theia_api.shared.config;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;

@@ -36,6 +36,20 @@ public class RoutesConfig {
                     .GET("/ws/**", http())
                     .before(uri("http://localhost:8081/ws"))
                     .build()
+            )
+            .and(
+                route("query_with_limits")
+                    .POST("/api/v1/search", http())
+                    .before(uri("http://localhost:8081/api/v1/search"))
+                    .filter(
+                        rateLimit(config ->
+                            config
+                                .setCapacity(30)
+                                .setPeriod(Duration.ofMinutes(1))
+                                .setKeyResolver(this::resolveUserKey)
+                        )
+                    )
+                    .build()
             );
     }
 
@@ -71,7 +85,7 @@ public class RoutesConfig {
 //                                        )
 //                                        .initialTokens(
 //                                            rateLimitConfig.getCapacity()
-//                                        ) // START WITH FULL BUCKET!
+//                                        )
 //                                        .build()
 //                                )
 //                                .build()

@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 @Slf4j
 @RestController
-@RequestMapping("/v1")
+@RequestMapping("api/v1")
 public class QueryController {
 
     private final SearchDocumentUseCase searchDocument;

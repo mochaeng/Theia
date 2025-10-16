@@ -15,7 +15,7 @@ import com.mochaeng.theia_api.ingestion.application.port.out.FileStoragePort;
 import com.mochaeng.theia_api.ingestion.application.port.out.PublishIncomingDocumentPort;
 import com.mochaeng.theia_api.ingestion.application.service.AcceptDocumentService;
 import com.mochaeng.theia_api.ingestion.application.service.UploadIncomingDocumentService;
-import com.mochaeng.theia_api.ingestion.application.web.DocumentController;
+import com.mochaeng.theia_api.ingestion.application.web.UploadController;
 import com.mochaeng.theia_api.ingestion.domain.model.Document;
 import com.mochaeng.theia_api.processing.infrastructure.adapter.persistence.DocumentPersistenceService;
 import java.io.IOException;
@@ -40,7 +40,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.util.StreamUtils;
 
-@WebMvcTest(DocumentController.class)
+@WebMvcTest(UploadController.class)
 @ActiveProfiles("test")
 public class DocumentUploadControllerTest {
 

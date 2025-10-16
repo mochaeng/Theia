@@ -19,7 +19,7 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor
 @Slf4j
-public class DocumentController {
+public class UploadController {
 
     private final UploadIncomingDocumentUseCase uploadDocumentUseCase;
 
