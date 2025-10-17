@@ -7,7 +7,7 @@ import io.vavr.control.Either;
 import java.util.List;
 
 public interface RetrieveDocumentPort {
-    Either<RetrieveDocumentError, List<DocumentSearch>> searchBySimilarity(
+    Either<RetrieveDocumentError, List<DocumentSearch>> BySimilarity(
         SearchQuery query
     );
 }

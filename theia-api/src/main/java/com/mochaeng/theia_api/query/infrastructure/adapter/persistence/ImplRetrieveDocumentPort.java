@@ -24,14 +24,13 @@ public class ImplRetrieveDocumentPort implements RetrieveDocumentPort {
     private final JpaFieldRepository fieldRepository;
 
     @Override
-    public Either<
-        RetrieveDocumentError,
-        List<DocumentSearch>
-    > searchBySimilarity(SearchQuery query) {
+    public Either<RetrieveDocumentError, List<DocumentSearch>> BySimilarity(
+        SearchQuery query
+    ) {
         return Try.of(() -> {
             var similarDocuments = fieldRepository.findSimilarDocuments(
                 query.embedding(),
-                query.fieldType(),
+                query.fieldTypes(),
                 query.threshold(),
                 query.limit()
             );

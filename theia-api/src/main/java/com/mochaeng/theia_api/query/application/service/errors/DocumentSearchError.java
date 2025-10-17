@@ -21,12 +21,12 @@ public sealed interface DocumentSearchError {
         return err ->
             switch (err) {
                 case EmbeddingError e -> new DocumentSearchError.GenerateQueryEmbeddingError(
-                    "Failed to generate embedding for query search: %s".formatted(
+                    "Failed to generate embedding for text search: %s".formatted(
                         e.message()
                     )
                 );
                 case RetrieveDocumentError e -> new DocumentSearchError.RetrieveSimilarItemsError(
-                    "Failed to retrieve similar documents for query search: %s".formatted(
+                    "Failed to retrieve similar documents for text search: %s".formatted(
                         e.message()
                     )
                 );

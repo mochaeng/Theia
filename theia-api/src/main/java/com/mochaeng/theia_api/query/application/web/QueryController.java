@@ -1,10 +1,10 @@
 package com.mochaeng.theia_api.query.application.web;
 
 import com.mochaeng.theia_api.query.application.port.in.SearchDocumentUseCase;
-import com.mochaeng.theia_api.query.application.service.errors.DocumentSearchError;
 import com.mochaeng.theia_api.query.application.web.dto.QueryRequest;
 import com.mochaeng.theia_api.query.application.web.dto.QueryResponse;
 import com.mochaeng.theia_api.query.application.web.dto.SearchQuery;
+import com.mochaeng.theia_api.query.domain.model.SearchResults;
 import com.mochaeng.theia_api.shared.dto.ErrorResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -33,7 +33,7 @@ public class QueryController {
         @Valid @RequestBody QueryRequest request
     ) {
         log.info(
-            "received search request for query: '{}' in field: '{}'",
+            "received search request for text '{}' in field '{}'",
             request.query(),
             request.fields()
         );
@@ -47,15 +47,14 @@ public class QueryController {
 
         return searchDocument
             .search(searchQuery)
-            .fold(this::toResponse, search -> {
-                var response = QueryResponse.from(search);
-                return ResponseEntity.ok(response);
-            });
+            .fold(this::mapError, this::mapResponse);
     }
 
-    private ResponseEntity<ErrorResponse> toResponse(DocumentSearchError e) {
-        return switch (e) {
-            case DocumentSearchError.InvalidInputError(
+    private ResponseEntity<ErrorResponse> mapError(
+        SearchDocumentUseCase.SearchError err
+    ) {
+        return switch (err) {
+            case SearchDocumentUseCase.InvalidInput(
                 var msg
             ) -> ResponseEntity.badRequest().body(
                 new ErrorResponse(msg, "/v1/search")
@@ -64,5 +63,10 @@ public class QueryController {
                 new ErrorResponse("", "/v1/search")
             );
         };
+    }
+
+    private ResponseEntity<QueryResponse> mapResponse(SearchResults search) {
+        var response = QueryResponse.from(search);
+        return ResponseEntity.ok(response);
     }
 }

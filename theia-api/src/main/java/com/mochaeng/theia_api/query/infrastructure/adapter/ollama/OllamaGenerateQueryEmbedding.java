@@ -19,7 +19,7 @@ public class OllamaGenerateQueryEmbedding
 
     @Override
     public Either<EmbeddingError, float[]> generate(String text) {
-        log.info("generating embeddings for given query: {}", text);
+        log.info("generating embeddings for given text: {}", text);
 
         return ollamaHelpers
             .makeOllamaCall(text)

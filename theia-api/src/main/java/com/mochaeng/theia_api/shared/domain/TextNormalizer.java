@@ -2,11 +2,11 @@ package com.mochaeng.theia_api.shared.domain;
 
 public class TextNormalizer {
 
-    public static String forNomic(String text) {
-        return forNomic(text, 10_000);
+    public static String clean(String text) {
+        return clean(text, 10_000);
     }
 
-    public static String forNomic(String text, int maxChars) {
+    public static String clean(String text, int maxChars) {
         if (text == null || text.isBlank()) {
             return "";
         }

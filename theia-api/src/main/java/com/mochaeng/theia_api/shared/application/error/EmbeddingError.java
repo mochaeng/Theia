@@ -3,6 +3,8 @@ package com.mochaeng.theia_api.shared.application.error;
 public sealed interface EmbeddingError {
     String message();
 
+    record GeneralError(String message) implements EmbeddingError {}
+
     record UnavailableService(String message) implements EmbeddingError {}
 
     record InvalidInput(String message) implements EmbeddingError {}

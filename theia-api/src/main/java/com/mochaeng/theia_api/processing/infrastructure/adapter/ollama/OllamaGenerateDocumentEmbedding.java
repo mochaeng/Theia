@@ -41,7 +41,7 @@ public class OllamaGenerateDocumentEmbedding
         // TODO: sending all requests fields at once to ollama
         for (var entry : fieldTexts.entrySet()) {
             var field = entry.getKey();
-            var textEmbedding = TextNormalizer.forNomic(
+            var textEmbedding = TextNormalizer.clean(
                 entry.getValue(),
                 props.getMaxTextLength()
             );
