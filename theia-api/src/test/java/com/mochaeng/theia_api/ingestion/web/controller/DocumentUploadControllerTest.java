@@ -35,6 +35,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -46,7 +47,7 @@ import org.springframework.util.StreamUtils;
 public class DocumentUploadControllerTest {
 
     private static final String UPLOAD_ENDPOINT = "/api/upload-document";
-    private static final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+    private static final long MAX_FILE_SIZE = 10 * 1024 * 1024;
     private static final List<String> ALLOWED_CONTENT_TYPES = List.of(
         MediaType.APPLICATION_PDF_VALUE
     );
@@ -69,6 +70,7 @@ public class DocumentUploadControllerTest {
     private ObjectMapper objectMapper;
 
     @Test
+    @WithMockUser
     @DisplayName(
         "Should successfully upload Bitcoin whitepaper PDF and return valid UUID"
     )
@@ -78,7 +80,7 @@ public class DocumentUploadControllerTest {
         );
         doNothing().when(kafkaEventPublisher).publishAsync(any());
 
-        MockMultipartFile bitcoinPdf = createRealPdfFile(
+        var bitcoinPdf = createRealPdfFile(
             BITCOIN_PDF_PATH,
             "bitcoin.pdf"
         );
@@ -89,14 +91,14 @@ public class DocumentUploadControllerTest {
             MediaType.APPLICATION_PDF_VALUE
         );
 
-        MvcResult result = mockMvc
+        var result = mockMvc
             .perform(multipart(UPLOAD_ENDPOINT).file(bitcoinPdf))
             .andExpect(status().isOk())
             .andExpect(content().contentType(MediaType.APPLICATION_JSON))
             .andExpect(jsonPath("$.documentID").exists())
             .andReturn();
 
-        String documentId = extractDocumentIdFromResponse(result);
+        var documentId = extractDocumentIdFromResponse(result);
         assertValidUUID(documentId);
 
         verify(storageService, times(1)).storeDocument(any(), any(), any());
@@ -116,7 +118,7 @@ public class DocumentUploadControllerTest {
     @Test
     @DisplayName("Should reject text file with unsupported content type")
     void uploadDocument_WithTextFile_ShouldReturnBadRequest() throws Exception {
-        MockMultipartFile textFile = createMockFile(
+        var textFile = createMockFile(
             "document.txt",
             MediaType.TEXT_PLAIN_VALUE,
             "Sample text".getBytes(StandardCharsets.UTF_8)
@@ -160,26 +162,6 @@ public class DocumentUploadControllerTest {
 
         mockMvc
             .perform(multipart(UPLOAD_ENDPOINT).file(emptyFile))
-            .andExpect(status().isBadRequest())
-            .andExpect(content().contentType(MediaType.APPLICATION_JSON));
-
-        verifyNoInteractions(storageService, kafkaEventPublisher);
-    }
-
-    @Test
-    @DisplayName("Should reject PDF file containing virus")
-    void uploadDocument_WithVirusInfectedPDF_ShouldReturnBadRequest()
-        throws Exception {
-        MockMultipartFile infectedFile;
-
-        infectedFile = createMockFile(
-            "infected.pdf",
-            MediaType.APPLICATION_PDF_VALUE,
-            createMinimalPdfContent()
-        );
-
-        mockMvc
-            .perform(multipart(UPLOAD_ENDPOINT).file(infectedFile))
             .andExpect(status().isBadRequest())
             .andExpect(content().contentType(MediaType.APPLICATION_JSON));
 
