@@ -18,6 +18,7 @@ import com.mochaeng.theia_api.ingestion.application.service.UploadIncomingDocume
 import com.mochaeng.theia_api.ingestion.application.web.UploadController;
 import com.mochaeng.theia_api.ingestion.domain.model.Document;
 import com.mochaeng.theia_api.processing.infrastructure.adapter.persistence.DocumentPersistenceService;
+import io.vavr.control.Either;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -72,7 +73,9 @@ public class DocumentUploadControllerTest {
         "Should successfully upload Bitcoin whitepaper PDF and return valid UUID"
     )
     void uploadDocument_WithValidPDF_ShouldReturnUUID() throws Exception {
-        when(storageService.storeDocument(any())).thenReturn("mocked-s3-path");
+        when(storageService.storeDocument(any(), any(), any())).thenReturn(
+            Either.right("mocked-s3-path")
+        );
         doNothing().when(kafkaEventPublisher).publishAsync(any());
 
         MockMultipartFile bitcoinPdf = createRealPdfFile(
@@ -96,13 +99,17 @@ public class DocumentUploadControllerTest {
         String documentId = extractDocumentIdFromResponse(result);
         assertValidUUID(documentId);
 
-        verify(storageService, times(1)).storeDocument(any());
+        verify(storageService, times(1)).storeDocument(any(), any(), any());
         verify(kafkaEventPublisher, times(1)).publishAsync(any());
 
         ArgumentCaptor<Document> documentCaptor = ArgumentCaptor.forClass(
             Document.class
         );
-        verify(storageService).storeDocument(documentCaptor.capture());
+        verify(storageService).storeDocument(
+            any(),
+            any(),
+            documentCaptor.capture()
+        );
         assertThat(documentCaptor.getValue()).isNotNull();
     }
 
