@@ -208,9 +208,9 @@ public class DocumentUploadAndProcessingIntegrationTest
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         Assertions.assertNotNull(response.getBody());
 
-        return Objects.requireNonNull(
-            (String) response.getBody().get("access_token")
-        );
+        var body = Objects.requireNonNull(response.getBody());
+
+        return (String) body.get("access_token");
     }
 
     //    private void assertDocumentExistsInDatabase(UUID id) {
