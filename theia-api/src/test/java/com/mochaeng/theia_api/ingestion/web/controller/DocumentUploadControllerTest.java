@@ -36,6 +36,7 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -46,7 +47,7 @@ import org.springframework.util.StreamUtils;
 @ActiveProfiles("test")
 public class DocumentUploadControllerTest {
 
-    private static final String UPLOAD_ENDPOINT = "/api/upload-document";
+    private static final String UPLOAD_ENDPOINT = "/api/v1/upload-document";
     private static final long MAX_FILE_SIZE = 10 * 1024 * 1024;
     private static final List<String> ALLOWED_CONTENT_TYPES = List.of(
         MediaType.APPLICATION_PDF_VALUE
@@ -58,32 +59,29 @@ public class DocumentUploadControllerTest {
     private MockMvc mockMvc;
 
     @MockitoBean
-    private FileStoragePort storageService;
+    private FileStoragePort fileStorage;
 
     @MockitoBean
     private DocumentPersistenceService documentPersistenceService;
 
     @MockitoBean
-    private PublishIncomingDocumentPort kafkaEventPublisher;
+    private PublishIncomingDocumentPort publisher;
 
     @Autowired
     private ObjectMapper objectMapper;
 
     @Test
-    @WithMockUser
     @DisplayName(
         "Should successfully upload Bitcoin whitepaper PDF and return valid UUID"
     )
     void uploadDocument_WithValidPDF_ShouldReturnUUID() throws Exception {
-        when(storageService.storeDocument(any(), any(), any())).thenReturn(
+        when(fileStorage.storeDocument(any(), any(), any())).thenReturn(
             Either.right("mocked-s3-path")
         );
-        doNothing().when(kafkaEventPublisher).publishAsync(any());
+        when(documentPersistenceService.existsByHash(any())).thenReturn(false);
+        when(publisher.publishSync(any())).thenReturn(Either.right(null));
 
-        var bitcoinPdf = createRealPdfFile(
-            BITCOIN_PDF_PATH,
-            "bitcoin.pdf"
-        );
+        var bitcoinPdf = createRealPdfFile(BITCOIN_PDF_PATH, "bitcoin.pdf");
 
         assertThat(bitcoinPdf.getSize()).isGreaterThan(0);
         assertThat(bitcoinPdf.getOriginalFilename()).isEqualTo("bitcoin.pdf");
@@ -92,7 +90,15 @@ public class DocumentUploadControllerTest {
         );
 
         var result = mockMvc
-            .perform(multipart(UPLOAD_ENDPOINT).file(bitcoinPdf))
+            .perform(
+                multipart(UPLOAD_ENDPOINT)
+                    .file(bitcoinPdf)
+                    .with(
+                        SecurityMockMvcRequestPostProcessors.jwt().jwt(jwt ->
+                            jwt.subject("user123")
+                        )
+                    )
+            )
             .andExpect(status().isOk())
             .andExpect(content().contentType(MediaType.APPLICATION_JSON))
             .andExpect(jsonPath("$.documentID").exists())
@@ -101,13 +107,11 @@ public class DocumentUploadControllerTest {
         var documentId = extractDocumentIdFromResponse(result);
         assertValidUUID(documentId);
 
-        verify(storageService, times(1)).storeDocument(any(), any(), any());
-        verify(kafkaEventPublisher, times(1)).publishAsync(any());
+        verify(fileStorage, times(1)).storeDocument(any(), any(), any());
+        verify(publisher, times(1)).publishSync(any());
 
-        ArgumentCaptor<Document> documentCaptor = ArgumentCaptor.forClass(
-            Document.class
-        );
-        verify(storageService).storeDocument(
+        var documentCaptor = ArgumentCaptor.forClass(Document.class);
+        verify(fileStorage).storeDocument(
             any(),
             any(),
             documentCaptor.capture()
@@ -125,30 +129,46 @@ public class DocumentUploadControllerTest {
         );
 
         mockMvc
-            .perform(multipart(UPLOAD_ENDPOINT).file(textFile))
+            .perform(
+                multipart(UPLOAD_ENDPOINT)
+                    .file(textFile)
+                    .with(
+                        SecurityMockMvcRequestPostProcessors.jwt().jwt(jwt ->
+                            jwt.subject("user123")
+                        )
+                    )
+            )
             .andExpect(status().isBadRequest())
             .andExpect(content().contentType(MediaType.APPLICATION_JSON));
 
-        verifyNoInteractions(storageService, kafkaEventPublisher);
+        verifyNoInteractions(fileStorage, publisher);
     }
 
     @Test
     @DisplayName("Should reject PDF file that exceeds size limit")
     void uploadDocument_WithOversizedPDF_ShouldReturnBadRequest()
         throws Exception {
-        byte[] oversizedContent = new byte[(int) MAX_FILE_SIZE + 1];
-        MockMultipartFile oversizedFile = createMockFile(
+        var oversizedContent = new byte[(int) MAX_FILE_SIZE + 1];
+        var oversizedFile = createMockFile(
             "large.pdf",
             MediaType.APPLICATION_PDF_VALUE,
             oversizedContent
         );
 
         mockMvc
-            .perform(multipart(UPLOAD_ENDPOINT).file(oversizedFile))
+            .perform(
+                multipart(UPLOAD_ENDPOINT)
+                    .file(oversizedFile)
+                    .with(
+                        SecurityMockMvcRequestPostProcessors.jwt().jwt(jwt ->
+                            jwt.subject("user123")
+                        )
+                    )
+            )
             .andExpect(status().isBadRequest())
             .andExpect(content().contentType(MediaType.APPLICATION_JSON));
 
-        verifyNoInteractions(storageService, kafkaEventPublisher);
+        verifyNoInteractions(fileStorage, publisher);
     }
 
     @Test
@@ -161,11 +181,19 @@ public class DocumentUploadControllerTest {
         );
 
         mockMvc
-            .perform(multipart(UPLOAD_ENDPOINT).file(emptyFile))
+            .perform(
+                multipart(UPLOAD_ENDPOINT)
+                    .file(emptyFile)
+                    .with(
+                        SecurityMockMvcRequestPostProcessors.jwt().jwt(jwt ->
+                            jwt.subject("user123")
+                        )
+                    )
+            )
             .andExpect(status().isBadRequest())
             .andExpect(content().contentType(MediaType.APPLICATION_JSON));
 
-        verifyNoInteractions(storageService, kafkaEventPublisher);
+        verifyNoInteractions(fileStorage, publisher);
     }
 
     private MockMultipartFile createMockFile(
@@ -203,7 +231,7 @@ public class DocumentUploadControllerTest {
 
     private byte[] loadPdfFromResources(String resourcePath)
         throws IOException {
-        ClassPathResource resource = new ClassPathResource(resourcePath);
+        var resource = new ClassPathResource(resourcePath);
         try (InputStream inputStream = resource.getInputStream()) {
             return StreamUtils.copyToByteArray(inputStream);
         }
