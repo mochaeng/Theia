@@ -15,4 +15,8 @@ public record DocumentResult(
     @JsonProperty("createdAt") LocalDateTime createdAt,
 
     @JsonProperty("updatedAt") LocalDateTime updatedAt
-) {}
+) {
+    public DocumentResult {
+        authors = authors != null ? List.copyOf(authors) : List.of();
+    }
+}

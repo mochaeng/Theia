@@ -9,7 +9,6 @@ import lombok.NoArgsConstructor;
 
 @Data
 @AllArgsConstructor
-@NoArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ErrorResponse {
 
@@ -18,6 +17,10 @@ public class ErrorResponse {
     private LocalDateTime timestamp;
     private String path;
     private Map<String, Object> details;
+
+    public ErrorResponse() {
+        this.timestamp = LocalDateTime.now();
+    }
 
     public ErrorResponse(String message) {
         this.message = message;

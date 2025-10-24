@@ -29,7 +29,7 @@ public class SearchDocumentService implements SearchDocumentUseCase {
         var queryResult = SearchQuery.validateQuery(searchQuery);
         if (queryResult.isLeft()) {
             return Either.left(
-                new InvalidInput(
+                new InvalidInputError(
                     "text validation failed: " + queryResult.getLeft().message()
                 )
             );
@@ -40,7 +40,7 @@ public class SearchDocumentService implements SearchDocumentUseCase {
         var embeddingsResult = generator.generate(queryResult.get().text());
         if (embeddingsResult.isLeft()) {
             return Either.left(
-                new General(
+                new GeneralError(
                     "embeddings generation failed: " +
                     embeddingsResult.getLeft().message()
                 )
@@ -48,10 +48,10 @@ public class SearchDocumentService implements SearchDocumentUseCase {
         }
 
         var query = queryResult.get().withEmbedding(embeddingsResult.get());
-        var searchResult = retriever.BySimilarity(query);
+        var searchResult = retriever.bySimilarity(query);
         if (searchResult.isLeft()) {
             return Either.left(
-                new General(
+                new GeneralError(
                     "search for query failed: " +
                     searchResult.getLeft().message()
                 )

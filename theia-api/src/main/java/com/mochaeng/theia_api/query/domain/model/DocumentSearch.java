@@ -13,4 +13,8 @@ public record DocumentSearch(
     String filePath,
     Instant createdAt,
     Instant updatedAt
-) {}
+) {
+    public DocumentSearch {
+        authors = authors != null ? List.copyOf(authors) : List.of();
+    }
+}

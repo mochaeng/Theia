@@ -2,6 +2,7 @@ package com.mochaeng.theia_api.query.application.web.dto;
 
 import com.mochaeng.theia_api.shared.domain.TextNormalizer;
 import io.vavr.control.Either;
+import java.util.Arrays;
 import java.util.List;
 
 public record SearchQuery(
@@ -11,6 +12,14 @@ public record SearchQuery(
     Float threshold,
     float[] embedding
 ) {
+    public SearchQuery {
+        fieldTypes = fieldTypes != null ? List.copyOf(fieldTypes) : List.of();
+
+        if (embedding != null) {
+            embedding = Arrays.copyOf(embedding, embedding.length);
+        }
+    }
+
     public static SearchQuery of(
         String query,
         List<String> fieldType,
@@ -21,7 +30,16 @@ public record SearchQuery(
     }
 
     public SearchQuery withEmbedding(float[] embedding) {
-        return new SearchQuery(text, fieldTypes, limit, threshold, embedding);
+        var embeddingCopy = embedding != null
+            ? Arrays.copyOf(embedding, embedding.length)
+            : null;
+        return new SearchQuery(
+            text,
+            fieldTypes,
+            limit,
+            threshold,
+            embeddingCopy
+        );
     }
 
     public static Either<SearchQueryError, SearchQuery> validateQuery(
@@ -34,4 +52,11 @@ public record SearchQuery(
     }
 
     public record SearchQueryError(String message) {}
+
+    @Override
+    public float[] embedding() {
+        return embedding != null
+            ? Arrays.copyOf(embedding, embedding.length)
+            : null;
+    }
 }

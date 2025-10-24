@@ -26,4 +26,14 @@ public record DocumentMetadata(
             ? null
             : Map.copyOf(additionalMetadata);
     }
+
+    @Override
+    public List<Author> authors() {
+        return List.copyOf(authors);
+    }
+
+    @Override
+    public List<Keyword> keywords() {
+        return List.copyOf(keywords);
+    }
 }

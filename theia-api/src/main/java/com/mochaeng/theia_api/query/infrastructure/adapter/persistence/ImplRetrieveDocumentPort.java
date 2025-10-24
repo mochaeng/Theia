@@ -24,7 +24,7 @@ public class ImplRetrieveDocumentPort implements RetrieveDocumentPort {
     private final JpaFieldRepository fieldRepository;
 
     @Override
-    public Either<RetrieveDocumentError, List<DocumentSearch>> BySimilarity(
+    public Either<RetrieveDocumentError, List<DocumentSearch>> bySimilarity(
         SearchQuery query
     ) {
         return Try.of(() -> {

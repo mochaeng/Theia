@@ -7,9 +7,13 @@ import io.vavr.control.Either;
 public interface SearchDocumentUseCase {
     Either<SearchError, SearchResults> search(SearchQuery query);
 
-    sealed interface SearchError permits InvalidInput, General {}
+    sealed interface SearchError permits InvalidInputError, GeneralError {}
 
-    record InvalidInput(String message) implements SearchError {}
+    record InvalidInputError(String message) implements SearchError {}
 
-    record General(String message) implements SearchError {}
+    record GeneralError(String message) implements SearchError {}
+
+    static SearchError of(String message) {
+        return new GeneralError(message);
+    }
 }

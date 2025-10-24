@@ -8,4 +8,8 @@ public record SearchResults(
     List<DocumentSearch> results,
     Integer totalResults,
     Long queryTimeMs
-) {}
+) {
+    public SearchResults {
+        results = results != null ? List.copyOf(results) : List.of();
+    }
+}

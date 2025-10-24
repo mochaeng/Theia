@@ -33,4 +33,8 @@ public record QueryRequest(
         message = "Threshold must be between 0.0 and 1.0"
     )
     Float threshold
-) {}
+) {
+    public QueryRequest {
+        fields = fields != null ? List.copyOf(fields) : List.of();
+    }
+}

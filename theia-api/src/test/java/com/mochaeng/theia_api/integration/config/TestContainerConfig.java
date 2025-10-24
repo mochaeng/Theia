@@ -14,7 +14,7 @@ import org.testcontainers.utility.DockerImageName;
 public abstract class TestContainerConfig {
 
     @Container
-    protected static KafkaContainer kafka = new KafkaContainer(
+    protected static final KafkaContainer kafka = new KafkaContainer(
         DockerImageName.parse("apache/kafka:4.0.0")
     )
         .withEnv("KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR", "1")
@@ -24,12 +24,12 @@ public abstract class TestContainerConfig {
         .withReuse(true);
 
     @Container
-    protected static MinIOContainer minio = new MinIOContainer(
+    protected static final MinIOContainer minio = new MinIOContainer(
         "minio/minio:RELEASE.2025-07-18T21-56-31Z"
     );
 
     @Container
-    protected static PostgreSQLContainer<?> postgres =
+    protected static final PostgreSQLContainer<?> postgres =
         new PostgreSQLContainer<>(
             DockerImageName.parse(
                 "pgvector/pgvector:pg17-trixie"
@@ -38,19 +38,19 @@ public abstract class TestContainerConfig {
 
     @Container
     @SuppressWarnings("resource")
-    protected static GenericContainer<?> grobid = new GenericContainer<>(
+    protected static final GenericContainer<?> grobid = new GenericContainer<>(
         DockerImageName.parse("lfoppiano/grobid:latest-crf")
     )
         .withExposedPorts(8070)
         .waitingFor(Wait.forHttp("/api/isalive").forStatusCode(200));
 
     @Container
-    protected static OllamaContainer ollama = new OllamaContainer(
+    protected static final OllamaContainer ollama = new OllamaContainer(
         "ollama/ollama:0.11.8"
     );
 
     @Container
-    protected static KeycloakContainer keycloak = new KeycloakContainer(
+    protected static final KeycloakContainer keycloak = new KeycloakContainer(
         "keycloak/keycloak:26.4"
     );
 

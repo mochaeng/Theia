@@ -54,13 +54,11 @@ public class QueryController {
         SearchDocumentUseCase.SearchError err
     ) {
         return switch (err) {
-            case SearchDocumentUseCase.InvalidInput(
-                var msg
-            ) -> ResponseEntity.badRequest().body(
-                new ErrorResponse(msg, "/v1/search")
+            case SearchDocumentUseCase.InvalidInputError ignored -> ResponseEntity.badRequest().body(
+                new ErrorResponse("/v1/search")
             );
-            case null, default -> ResponseEntity.badRequest().body(
-                new ErrorResponse("", "/v1/search")
+            case null, default -> ResponseEntity.internalServerError().body(
+                new ErrorResponse("/v1/search")
             );
         };
     }
