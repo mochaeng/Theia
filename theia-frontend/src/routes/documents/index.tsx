@@ -3,26 +3,33 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
+import { Separator } from '@/components/ui/separator'
 import {
   useDocumentProgress,
   type DocumentProgress,
 } from '@/hooks/useDocumentProgress'
 import { UPLOAD_ENDPOINT } from '@/lib/constants'
+import { enforceLogin, useOidc } from '@/oidc'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import {
+  ActivityIcon,
+  CheckCircle2Icon,
   CheckCircleIcon,
   ClockIcon,
   FileText,
   FileTextIcon,
+  InfoIcon,
   Loader2Icon,
+  TrendingUpIcon,
   UploadIcon,
   XCircleIcon,
 } from 'lucide-react'
 import { useCallback, useState } from 'react'
 
 export const Route = createFileRoute('/documents/')({
-  component: DocumentUploadWithProgress,
+  component: DocumentProcessingDashboard,
+  beforeLoad: enforceLogin,
 })
 
 function DocumentUploadWithProgress() {
@@ -30,6 +37,9 @@ function DocumentUploadWithProgress() {
   const [documentId, setDocumentId] = useState('')
   const [isDragOver, setIsDragOver] = useState(false)
   const queryClient = useQueryClient()
+  const { decodedIdToken } = useOidc({
+    assert: 'user logged in',
+  })
 
   const handleProcessingComplete = useCallback(
     (data: DocumentProgress) => {
@@ -322,6 +332,416 @@ function DocumentUploadWithProgress() {
           </CardContent>
         </Card>
       )}
+    </div>
+  )
+}
+
+function DocumentProcessingDashboard() {
+  const [documents, setDocuments] = useState([])
+  const [isDragOver, setIsDragOver] = useState(false)
+  const [nextId, setNextId] = useState(1)
+  const { decodedIdToken } = useOidc({ assert: 'user logged in' })
+
+  const stages = [
+    { id: 'uploading', label: 'Uploading', icon: UploadIcon },
+    { id: 'extracting', label: 'Extracting', icon: FileTextIcon },
+    { id: 'embedding', label: 'Embedding', icon: ActivityIcon },
+    { id: 'saving', label: 'Saving', icon: CheckCircle2Icon },
+  ]
+
+  const handleFileSelect = (files) => {
+    const pdfFiles = Array.from(files).filter(
+      (file) => file.type === 'application/pdf',
+    )
+    const newDocuments = pdfFiles.map((file) => ({
+      id: nextId + documents.length + pdfFiles.indexOf(file),
+      file,
+      status: 'queued', // queued, processing, completed, failed
+      progress: 0,
+      stage: 'uploading',
+    }))
+
+    setDocuments((prev) => [...prev, ...newDocuments])
+    setNextId((prev) => prev + pdfFiles.length)
+  }
+
+  const handleDrop = (e) => {
+    e.preventDefault()
+    setIsDragOver(false)
+    const files = e.dataTransfer.files
+    if (files.length > 0) handleFileSelect(files)
+  }
+
+  const removeDocument = (id) => {
+    setDocuments((prev) => prev.filter((doc) => doc.id !== id))
+  }
+
+  const simulateProcessing = (docId) => {
+    setDocuments((prev) =>
+      prev.map((doc) =>
+        doc.id === docId ? { ...doc, status: 'processing', progress: 0 } : doc,
+      ),
+    )
+
+    let currentProgress = 0
+    const interval = setInterval(() => {
+      currentProgress += Math.random() * 15
+
+      if (currentProgress >= 100) {
+        currentProgress = 100
+        clearInterval(interval)
+
+        setDocuments((prev) =>
+          prev.map((doc) =>
+            doc.id === docId
+              ? { ...doc, status: 'completed', progress: 100 }
+              : doc,
+          ),
+        )
+
+        // Auto-remove after 3 seconds
+        setTimeout(() => removeDocument(docId), 3000)
+      } else {
+        let stage = 'uploading'
+        if (currentProgress >= 25 && currentProgress < 50) stage = 'extracting'
+        else if (currentProgress >= 50 && currentProgress < 85)
+          stage = 'embedding'
+        else if (currentProgress >= 85) stage = 'saving'
+
+        setDocuments((prev) =>
+          prev.map((doc) =>
+            doc.id === docId
+              ? { ...doc, progress: Math.min(currentProgress, 100), stage }
+              : doc,
+          ),
+        )
+      }
+    }, 500)
+  }
+
+  const processAll = () => {
+    documents
+      .filter((doc) => doc.status === 'queued')
+      .forEach((doc) => simulateProcessing(doc.id))
+  }
+
+  const queuedCount = documents.filter((d) => d.status === 'queued').length
+  const processingCount = documents.filter(
+    (d) => d.status === 'processing',
+  ).length
+  const completedCount = documents.filter(
+    (d) => d.status === 'completed',
+  ).length
+
+  return (
+    <div className="min-h-screen p-6">
+      <div className="mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold tracking-tight mb-2">
+            Research Repository - {decodedIdToken.name}
+          </h1>
+          <p className="text-muted-foreground">
+            Upload white papers and scientific documents for semantic search
+            indexing
+          </p>
+        </div>
+
+        <div className="grid grid-cols-[1fr_320px] gap-6">
+          {/* Main Content Area */}
+          <div className="space-y-6">
+            {/* Upload Card */}
+            {/*<Card>
+              <CardHeader>
+                <CardTitle>Submit Research Documents</CardTitle>
+                <CardDescription>
+                  Upload white papers, research articles, or scientific
+                  publications
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div
+                  className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer ${
+                    isDragOver
+                      ? 'border-primary bg-primary/5'
+                      : 'border-muted-foreground/25 hover:border-muted-foreground/50'
+                  }`}
+                  onDragOver={(e) => {
+                    e.preventDefault()
+                    setIsDragOver(true)
+                  }}
+                  onDragLeave={(e) => {
+                    e.preventDefault()
+                    setIsDragOver(false)
+                  }}
+                  onDrop={handleDrop}
+                  onClick={() => document.getElementById('file-input').click()}
+                >
+                  <input
+                    type="file"
+                    accept=".pdf"
+                    multiple
+                    onChange={(e) => handleFileSelect(e.target.files)}
+                    className="hidden"
+                    id="file-input"
+                  />
+                  <UploadIcon className="w-10 h-10 mx-auto mb-3 text-muted-foreground" />
+                  <h3 className="text-base font-semibold mb-1">
+                    {isDragOver
+                      ? 'Drop your research papers here'
+                      : 'Upload research documents'}
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    PDF format only, up to 50MB per document
+                  </p>
+                  <Button variant="secondary" size="sm">
+                    <PlusIcon className="w-4 h-4 mr-2" />
+                    Select Files
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>*/}
+            <DocumentUploadWithProgress />
+
+            {/* Queue Card */}
+            {/*{documents.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Indexing Queue</CardTitle>
+                      <CardDescription>
+                        {documents.length} document
+                        {documents.length !== 1 ? 's' : ''} in queue
+                      </CardDescription>
+                    </div>
+                    {queuedCount > 0 && (
+                      <Button onClick={processAll} size="sm">
+                        <ActivityIcon className="w-4 h-4 mr-2" />
+                        Index All ({queuedCount})
+                      </Button>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-[400px] pr-4">
+                    <div className="space-y-3">
+                      {documents.map((doc) => (
+                        <Card key={doc.id} className="relative">
+                          <CardContent className="p-4">
+                            <div className="flex items-start gap-3">
+                              <div
+                                className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                                  doc.status === 'completed'
+                                    ? 'bg-green-100 dark:bg-green-950'
+                                    : doc.status === 'processing'
+                                      ? 'bg-blue-100 dark:bg-blue-950'
+                                      : doc.status === 'failed'
+                                        ? 'bg-red-100 dark:bg-red-950'
+                                        : 'bg-muted'
+                                }`}
+                              >
+                                {doc.status === 'completed' ? (
+                                  <CheckCircle2Icon className="w-5 h-5 text-green-600 dark:text-green-400" />
+                                ) : doc.status === 'processing' ? (
+                                  <Loader2Icon className="w-5 h-5 text-blue-600 dark:text-blue-400 animate-spin" />
+                                ) : doc.status === 'failed' ? (
+                                  <XCircleIcon className="w-5 h-5 text-red-600 dark:text-red-400" />
+                                ) : (
+                                  <FileText className="w-5 h-5 text-muted-foreground" />
+                                )}
+                              </div>
+
+                              <div className="flex-1 min-w-0 space-y-2">
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="min-w-0">
+                                    <h4 className="font-medium text-sm truncate">
+                                      {doc.file.name}
+                                    </h4>
+                                    <p className="text-xs text-muted-foreground">
+                                      {(doc.file.size / 1024 / 1024).toFixed(2)}{' '}
+                                      MB
+                                    </p>
+                                  </div>
+                                  <div className="flex items-center gap-2 flex-shrink-0">
+                                    <Badge
+                                      variant={
+                                        doc.status === 'completed'
+                                          ? 'default'
+                                          : doc.status === 'processing'
+                                            ? 'secondary'
+                                            : doc.status === 'failed'
+                                              ? 'destructive'
+                                              : 'outline'
+                                      }
+                                      className="text-xs"
+                                    >
+                                      {doc.status}
+                                    </Badge>
+                                    {doc.status === 'queued' && (
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-7 w-7"
+                                        onClick={() => removeDocument(doc.id)}
+                                      >
+                                        <Trash2Icon className="w-3 h-3" />
+                                      </Button>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {doc.status === 'processing' && (
+                                  <div className="space-y-2">
+                                    <div className="flex justify-between text-xs">
+                                      <span className="text-muted-foreground">
+                                        {doc.stage}
+                                      </span>
+                                      <span className="font-medium">
+                                        {Math.round(doc.progress)}%
+                                      </span>
+                                    </div>
+                                    <Progress
+                                      value={doc.progress}
+                                      className="h-1.5"
+                                    />
+                                  </div>
+                                )}
+
+                                {doc.status === 'queued' && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="w-full"
+                                    onClick={() => simulateProcessing(doc.id)}
+                                  >
+                                    Index Now
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+            )}*/}
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-6">
+            {/* Stats Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Current Session</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ClockIcon className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
+                      Queued
+                    </span>
+                  </div>
+                  <span className="text-2xl font-bold">{queuedCount}</span>
+                </div>
+                <Separator />
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ActivityIcon className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
+                      Indexing
+                    </span>
+                  </div>
+                  <span className="text-2xl font-bold text-blue-600">
+                    {processingCount}
+                  </span>
+                </div>
+                <Separator />
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <TrendingUpIcon className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
+                      Indexed
+                    </span>
+                  </div>
+                  <span className="text-2xl font-bold text-green-600">
+                    {completedCount}
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Info Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <InfoIcon className="w-4 h-4" />
+                  How Indexing Works
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm text-muted-foreground">
+                <p>
+                  Your research documents are processed through several stages:
+                </p>
+                <Separator />
+                <div className="space-y-2">
+                  <div className="flex items-start gap-2">
+                    <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-xs font-bold text-primary">1</span>
+                    </div>
+                    <div>
+                      <p className="font-medium text-foreground">
+                        Text Extraction
+                      </p>
+                      <p className="text-xs">Extract content from PDF</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-xs font-bold text-primary">2</span>
+                    </div>
+                    <div>
+                      <p className="font-medium text-foreground">
+                        Semantic Embeddings
+                      </p>
+                      <p className="text-xs">Generate vector representations</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-xs font-bold text-primary">3</span>
+                    </div>
+                    <div>
+                      <p className="font-medium text-foreground">
+                        Vector Database
+                      </p>
+                      <p className="text-xs">Index for semantic search</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Tips Card */}
+            <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950 dark:border-amber-900">
+              <CardHeader>
+                <CardTitle className="text-base text-amber-900 dark:text-amber-100">
+                  Submission Guidelines
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm text-amber-800 dark:text-amber-200 space-y-1">
+                <p>• Submit text-based PDFs only</p>
+                <p>• Scanned images won't index well</p>
+                <p>• Maximum 50MB per document</p>
+                <p>• Add metadata for better discovery</p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
