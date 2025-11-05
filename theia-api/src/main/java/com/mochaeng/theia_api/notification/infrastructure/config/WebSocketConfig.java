@@ -42,10 +42,10 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         config.setApplicationDestinationPrefixes("/app");
     }
 
-        @Override
-        public void configureClientInboundChannel(
-            ChannelRegistration registration
-        ) {
-            registration.interceptors(authChannelInterceptor);
-        }
+    @Override
+    public void configureClientInboundChannel(
+        ChannelRegistration registration
+    ) {
+        registration.interceptors(authChannelInterceptor);
+    }
 }

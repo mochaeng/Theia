@@ -1,8 +1,9 @@
 package com.mochaeng.theia_api.notification.infrastructure.config;
 
+import java.util.Objects;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.core.Ordered;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.simp.stomp.StompCommand;
@@ -22,7 +23,10 @@ public class AuthChannelInterceptor implements ChannelInterceptor {
     private final JwtAuthenticationConverter jwtAuthenticationConverter;
 
     @Override
-    public Message<?> preSend(Message<?> message, MessageChannel channel) {
+    public Message<?> preSend(
+        @NonNull Message<?> message,
+        @NonNull MessageChannel channel
+    ) {
         var accessor = StompHeaderAccessor.wrap(message);
 
         if (StompCommand.CONNECT.equals(accessor.getCommand())) {
@@ -31,7 +35,10 @@ public class AuthChannelInterceptor implements ChannelInterceptor {
                 var token = authHeader.substring(7);
                 try {
                     var jwt = jwtDecoder.decode(token);
-                    var auth = jwtAuthenticationConverter.convert(jwt);
+                    var auth = Objects.requireNonNull(
+                        jwtAuthenticationConverter.convert(jwt),
+                        "JWT converter returned null authentication"
+                    );
 
                     accessor.setUser(auth);
                     SecurityContextHolder.getContext().setAuthentication(auth);
