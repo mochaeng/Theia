@@ -18,11 +18,28 @@ spring:
     gateway:
       server:
         webflux:
+#          forwarded:
+#            by:
+#              enabled=true
           routes:
             - id: upload_with_limits
               uri: http://localhost:8081/api/v1/upload-document
               predicates:
                 - Path=/api/v1/upload-document
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 10
+                    redis-rate-limiter.burstCapacity: 20
+                    redis-rate-limiter.requestedTokens: 5
+            - id: websocket_connection
+              uri: ws://localhost:8081/ws
+              predicates:
+                - Path=/ws/**
+            - id: query_with_limits
+              uri: http://localhost:8081/api/v1/search
+              predicates:
+                - Path=/api/v1/search
               filters:
                 - name: RequestRateLimiter
                   args:
