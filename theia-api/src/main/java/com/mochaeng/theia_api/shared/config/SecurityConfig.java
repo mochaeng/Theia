@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -29,7 +30,11 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         return http
             .authorizeHttpRequests(authorizeHttp -> {
-                authorizeHttp.anyRequest().authenticated();
+                authorizeHttp
+                    .requestMatchers("/ws/**")
+                    .permitAll()
+                    .anyRequest()
+                    .authenticated();
             })
             .oauth2ResourceServer(oauth2ResourceServer ->
                 oauth2ResourceServer.jwt(jwt ->

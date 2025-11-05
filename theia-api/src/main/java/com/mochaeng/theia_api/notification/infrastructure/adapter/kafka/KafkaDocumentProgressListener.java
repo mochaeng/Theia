@@ -24,7 +24,7 @@ public class KafkaDocumentProgressListener {
             return;
         }
 
-        log.info("received DocumentProgressEvent {}", event.status());
+        log.info("received DocumentProgressEvent '{}'", event.status());
 
         notifier.notify(event);
     }

@@ -67,8 +67,9 @@ public class ProcessDocumentService implements ProcessDocumentUseCase {
         );
         if (embeddings.isLeft()) {
             log.info(
-                "embedding generation failed for '{}'",
-                message.documentID()
+                "embedding generation failed for '{}': {}",
+                message.documentID(),
+                embeddings.getLeft().message()
             );
             publishFailedEvent(message.documentID());
             return;

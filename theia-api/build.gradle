@@ -22,6 +22,7 @@ spotless {
     java {
         prettier(['prettier': '3.6.2', 'prettier-plugin-java': '2.7.4'])
                 .config(['parser': 'java', 'tabWidth': 4, 'plugins': ['prettier-plugin-java']])
+		toggleOffOn()
     }
 }
 
@@ -72,7 +73,7 @@ dependencies {
 //	implementation 'org.springframework.cloud:spring-cloud-gateway-mvc:4.3.1'
 	implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
 //	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
-
+	implementation 'org.springframework.security:spring-security-messaging'
 //	implementation 'com.bucket4j:bucket4j_jdk17-core:8.15.0'
 //	implementation 'com.bucket4j:bucket4j_jdk17-lettuce:8.15.0'
 //	implementation 'io.lettuce:lettuce-core:6.8.1.RELEASE'
